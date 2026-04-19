@@ -1,0 +1,68 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.DS_Store
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Credentials & sensitive files
+*.env
+*.key
+*.pem
+cookie.file
+secrets/
+.secret
+*.secret
+wp-config.php
+config.php
+*.credentials
+*.token
+
+# Logs
+*.log
+logs/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.hatch/
+*.whl
+
+# Environnement local (secrets)
+.env
+.env.local
+.env.*.local
+
+# Tests et couverture
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+
+# Fichiers de factures de test sensibles
+tests/fixtures/*.xml
+tests/fixtures/*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code (local settings, memory, session data)
+.claude/
