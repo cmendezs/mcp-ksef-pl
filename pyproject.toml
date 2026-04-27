@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-ksef-pl"
+version = "0.1.0"
+description = "MCP server for Polish electronic invoicing — KSeF (FA(2)) and Peppol/EN 16931"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Christophe Mendez" }]
+requires-python = ">=3.10"
+keywords = ["mcp", "ksef", "e-invoicing", "poland", "peppol", "en16931", "vat", "faktura"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "mcp-einvoicing-core>=0.1.0",
+    "fastmcp>=0.1.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "lxml>=5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-httpx>=0.30.0",
+    "mypy>=1.8.0",
+    "ruff>=0.3.0",
+    "lxml-stubs>=0.5.0",
+]
+
+[project.scripts]
+mcp-ksef-pl = "mcp_ksef_pl.server:main"
+
+[project.urls]
+Homepage = "https://github.com/cmendezs/mcp-ksef-pl"
+Repository = "https://github.com/cmendezs/mcp-ksef-pl"
+Issues = "https://github.com/cmendezs/mcp-ksef-pl/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_ksef_pl"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
