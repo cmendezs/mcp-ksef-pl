@@ -20,10 +20,9 @@ from mcp_einvoicing_core import (
     AuthMode,
     BaseEInvoicingClient,
     BaseLifecycleManager,
-    OAuthConfig,
     PlatformError,
-    get_logger,
 )
+from mcp_einvoicing_core.logging_utils import get_logger
 
 from .config import KSeFSettings
 
@@ -37,20 +36,14 @@ class KSeFClient(BaseEInvoicingClient):
         super().__init__(
             base_url=settings.base_url,
             auth_mode=AuthMode.BEARER_TOKEN,
-            oauth_config=OAuthConfig(
-                token_url="",
-                client_id="",
-                client_secret="",
-            ),
-            timeout=settings.timeout,
+            oauth_config=None,
+            static_bearer_token=settings.session_token or None,
+            http_timeout=float(settings.timeout),
         )
-        self._session_token = settings.session_token
-
-    async def _get_bearer_token(self) -> str:
-        return self._session_token
 
     def update_session_token(self, token: str) -> None:
-        self._session_token = token
+        # _static_token is the private attr used by BaseEInvoicingClient for BEARER_TOKEN mode
+        self._static_token = token
 
     # ------------------------------------------------------------------
     # Raw KSeF API helpers
@@ -109,7 +102,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         if token := metadata.get("session_token"):
             self._client.update_session_token(token)
 
-        if not self._client._session_token:
+        if not self._client._static_token:
             raise PlatformError(
                 status_code=401,
                 message="No KSeF session token provided. Obtain one via the KSeF auth flow and pass it as KSEF_SESSION_TOKEN or in metadata['session_token'].",

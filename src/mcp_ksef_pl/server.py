@@ -12,9 +12,8 @@ from fastmcp import FastMCP
 from mcp_einvoicing_core import (
     DocumentValidationResult,
     InvoiceDocument,
-    get_logger,
-    setup_logging,
 )
+from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 
 from .config import KSeFSettings
 from .generator import FA2Generator

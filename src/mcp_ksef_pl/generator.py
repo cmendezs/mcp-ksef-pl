@@ -14,9 +14,9 @@ from mcp_einvoicing_core import (
     InvoiceParty,
     VATSummary,
     format_amount,
-    xml_escape,
     xml_optional,
 )
+from mcp_einvoicing_core.xml_utils import xml_escape
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _SYSTEM_INFO = "mcp-ksef-pl/0.1.0"
