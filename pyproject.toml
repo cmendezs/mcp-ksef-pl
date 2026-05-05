@@ -9,20 +9,19 @@ description = "MCP server for Polish electronic invoicing — KSeF (FA(2)) and P
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Christophe Mendez" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["mcp", "ksef", "e-invoicing", "poland", "peppol", "en16931", "vat", "faktura"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Office/Business :: Financial",
 ]
 dependencies = [
-    "mcp-einvoicing-core>=0.1.0",
+    "mcp-einvoicing-core>=0.1.0,<1.0.0",
     "fastmcp>=0.1.0",
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
@@ -58,11 +57,11 @@ testpaths = ["tests"]
 
 [tool.mypy]
 strict = true
-python_version = "3.10"
+python_version = "3.11"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
