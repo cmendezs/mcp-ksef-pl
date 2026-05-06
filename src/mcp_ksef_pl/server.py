@@ -16,7 +16,7 @@ from mcp_einvoicing_core import (
 from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 
 from .config import KSeFSettings
-from .generator import FA2Generator
+from .generator import FA2Generator, FA3Generator
 from .lifecycle import KSeFLifecycleManager
 from .parser import FA2Parser
 from .party_validator import PolishPartyValidator, validate_nip, validate_regon
@@ -37,6 +37,7 @@ mcp = FastMCP(
 )
 
 _fa2_generator = FA2Generator()
+_fa3_generator = FA3Generator()
 _fa2_validator = FA2Validator()
 _fa2_parser = FA2Parser()
 _peppol_generator = PeppolUBLGenerator()
@@ -56,6 +57,22 @@ async def generate_fa2_invoice(invoice: InvoiceDocument) -> str:
     The seller's tax_id must be a Polish NIP (10 digits).
     """
     return await _fa2_generator.generate(invoice)
+
+
+@mcp.tool
+async def generate_fa3_invoice(invoice: InvoiceDocument) -> str:
+    """Generate a KSeF-compliant FA(3) XML invoice from structured invoice data.
+
+    FA(3) is required for all new invoice submissions via KSeF API v2.
+    Use this tool — not generate_fa2_invoice — before calling submit_invoice_to_ksef.
+
+    The seller's tax_id must be a Polish NIP (10 digits).
+    The buyer's tax_id may be a Polish NIP, a EU VAT number (set alt_tax_id),
+    or absent (leave tax_id.identifier empty to emit <BrakID>).
+
+    Returns the FA(3) XML string ready for submit_invoice_to_ksef.
+    """
+    return await _fa3_generator.generate(invoice)
 
 
 @mcp.tool
@@ -86,36 +103,51 @@ async def parse_fa2_invoice(xml_content: str) -> dict[str, Any]:
 async def submit_invoice_to_ksef(
     xml_content: str,
     session_token: str = "",
-    terminate_after: bool = True,
 ) -> dict[str, Any]:
-    """Submit a FA(2) XML invoice to the KSeF platform.
+    """Submit a FA(3) XML invoice to the KSeF platform (API v2).
+
+    KSeF API v2 requires FA(3) format for submission.  Use generate_fa2_invoice
+    only for validation or parsing; it produces FA(2) XML which KSeF v2 does not
+    accept.  FA(3) generation is tracked in roadmap-2026.md.
 
     Parameters
     ----------
-    xml_content:     FA(2) XML string to submit.
-    session_token:   KSeF session token (overrides KSEF_SESSION_TOKEN env var).
-                     Obtain this via the KSeF auth challenge-response flow.
-    terminate_after: Terminate the KSeF session after submission (default True).
+    xml_content:   FA(3) invoice XML string to submit.
+    session_token: KSeF v2 AccessToken (overrides KSEF_SESSION_TOKEN env var).
+                   Obtain via the challenge → authenticate → redeem flow:
+                   https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
 
-    Returns a dict with 'reference_number' and platform response details.
+    Returns a dict with:
+      session_reference  — KSeF session reference number
+      invoice_reference  — per-invoice reference number
+      reference_number   — "{sessionRef}:{invoiceRef}" for get_ksef_invoice_status
+      status             — "submitted"
     """
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)
-    metadata: dict[str, Any] = {"terminate_after": terminate_after}
+    metadata: dict[str, Any] = {}
     if session_token:
         metadata["session_token"] = session_token
 
-    reference = await manager.submit_document(xml_content, metadata)
-    return {"reference_number": reference, "status": "submitted"}
+    compound_ref = await manager.submit_document(xml_content, metadata)
+    session_ref, invoice_ref = compound_ref.split(":", 1)
+    return {
+        "session_reference": session_ref,
+        "invoice_reference": invoice_ref,
+        "reference_number": compound_ref,
+        "status": "submitted",
+    }
 
 
 @mcp.tool
 async def get_ksef_invoice_status(reference_number: str) -> dict[str, Any]:
-    """Retrieve the processing status of a submitted KSeF invoice.
+    """Retrieve the processing status of a submitted KSeF invoice (API v2).
 
     Parameters
     ----------
-    reference_number: The elementReferenceNumber returned by submit_invoice_to_ksef.
+    reference_number: The 'reference_number' field from submit_invoice_to_ksef
+                      ("{sessionRef}:{invoiceRef}").  Pass just the sessionRef
+                      to retrieve the overall session status instead.
     """
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)

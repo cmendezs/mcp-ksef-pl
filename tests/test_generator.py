@@ -1,11 +1,12 @@
-"""Tests for the FA(2) XML generator."""
+"""Tests for the FA(2) and FA(3) XML generators."""
 
 import pytest
 from mcp_einvoicing_core import InvoiceDocument
 
-from mcp_ksef_pl.generator import FA2Generator
+from mcp_ksef_pl.generator import FA2Generator, FA3Generator
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
+_NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
 
 
 class TestFA2Generator:
@@ -85,3 +86,134 @@ class TestFA2Generator:
         xml = await generator.generate(sample_invoice)
         assert "<StopkaFaktury>" in xml
         assert "Termin płatności" in xml
+
+
+class TestFA3Generator:
+    @pytest.fixture
+    def generator(self) -> FA3Generator:
+        return FA3Generator()
+
+    def test_format_metadata(self, generator: FA3Generator) -> None:
+        assert generator.get_format_name() == "FA(3)"
+        assert generator.get_country_code() == "PL"
+        assert generator.get_namespace() == _NS3
+
+    @pytest.mark.asyncio
+    async def test_namespace(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert _NS3 in xml
+        # FA(2) namespace must NOT appear
+        assert _NS not in xml
+
+    @pytest.mark.asyncio
+    async def test_header_fields(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert 'kodSystemowy="FA (3)"' in xml
+        assert "<WariantFormularza>3</WariantFormularza>" in xml
+        # Correct field name (not the FA(2) typo DataWytworzenieFa)
+        assert "<DataWytworzeniaFa>" in xml
+        assert "DataWytworzenieFa" not in xml
+
+    @pytest.mark.asyncio
+    async def test_seller_nip(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<Podmiot1>" in xml
+        assert "<NIP>5261040828</NIP>" in xml
+
+    @pytest.mark.asyncio
+    async def test_buyer_has_jst_and_gv_flags(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<Podmiot2>" in xml
+        # Both mandatory FA(3) flags must be present with value 2 (not applicable)
+        assert "<JST>2</JST>" in xml
+        assert "<GV>2</GV>" in xml
+
+    @pytest.mark.asyncio
+    async def test_address_uses_adresl1(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        # TAdres in FA(3) uses AdresL1 (composed) — no KodPocztowy or Miejscowosc
+        assert "<AdresL1>" in xml
+        assert "KodPocztowy" not in xml
+        assert "Miejscowosc" not in xml
+
+    @pytest.mark.asyncio
+    async def test_invoice_fields(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<P_1>2024-03-15</P_1>" in xml
+        assert "<P_2>FV/2024/001</P_2>" in xml
+        assert "<KodWaluty>PLN</KodWaluty>" in xml
+
+    @pytest.mark.asyncio
+    async def test_vat_fields(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<P_13_1>2000.00</P_13_1>" in xml
+        assert "<P_14_1>460.00</P_14_1>" in xml
+        assert "<P_15>2460.00</P_15>" in xml
+
+    @pytest.mark.asyncio
+    async def test_adnotacje_structure(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<Adnotacje>" in xml
+        # Mandatory sub-elements absent from FA(2) generator
+        assert "<Zwolnienie>" in xml
+        assert "<P_19N>1</P_19N>" in xml
+        assert "<NoweSrodkiTransportu>" in xml
+        assert "<P_22N>1</P_22N>" in xml
+        assert "<PMarzy>" in xml
+        assert "<P_PMarzyN>1</P_PMarzyN>" in xml
+
+    @pytest.mark.asyncio
+    async def test_rodzaj_faktury_present(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<RodzajFaktury>VAT</RodzajFaktury>" in xml
+
+    @pytest.mark.asyncio
+    async def test_no_fawiersze_wrapper(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        # FA(3) has no <FaWiersze> wrapper — lines are direct <FaWiersz> children of <Fa>
+        assert "FaWiersze" not in xml
+        assert "<FaWiersz>" in xml
+        assert "<P_7>Usługi konsultingowe</P_7>" in xml
+
+    @pytest.mark.asyncio
+    async def test_note_in_stopka(
+        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        # Note must be in <Stopka><Informacje>, not inside <Fa>
+        assert "<Stopka>" in xml
+        assert "<Informacje>" in xml
+        assert "<StopkaFaktury>" in xml
+        assert "Termin płatności" in xml
+        # Verify ordering: </Fa> comes before <Stopka>
+        assert xml.index("</Fa>") < xml.index("<Stopka>")
+
+    @pytest.mark.asyncio
+    async def test_no_note_omits_stopka(
+        self,
+        generator: FA3Generator,
+        sample_invoice: InvoiceDocument,
+    ) -> None:
+        invoice_no_note = sample_invoice.model_copy(update={"note": None})
+        xml = await generator.generate(invoice_no_note)
+        assert "<Stopka>" not in xml

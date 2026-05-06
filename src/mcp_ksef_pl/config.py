@@ -1,18 +1,18 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class KSeFEnvironment(str, Enum):
+class KSeFEnvironment(StrEnum):
     PRODUCTION = "production"
     TEST = "test"
-    DEMO = "demo"
 
 
+# KSeF API v2 base URLs (api.ksef.mf.gov.pl/v2).
+# The v1 domain (ksef.mf.gov.pl/api) and the demo environment are not part of v2.
 _BASE_URLS: dict[KSeFEnvironment, str] = {
-    KSeFEnvironment.PRODUCTION: "https://ksef.mf.gov.pl/api",
-    KSeFEnvironment.TEST: "https://ksef-test.mf.gov.pl/api",
-    KSeFEnvironment.DEMO: "https://ksef-demo.mf.gov.pl/api",
+    KSeFEnvironment.PRODUCTION: "https://api.ksef.mf.gov.pl/v2",
+    KSeFEnvironment.TEST: "https://api.ksef-test.mf.gov.pl/v2",
 }
 
 
@@ -21,10 +21,10 @@ class KSeFSettings(BaseSettings):
 
     environment: KSeFEnvironment = KSeFEnvironment.TEST
 
-    # Session token supplied by the caller (obtained via KSeF auth challenge flow).
-    # For automated flows the caller must perform the challenge-response sign step
-    # separately (qualified e-signature or token from the MF portal) and pass the
-    # resulting sessionToken here.
+    # KSeF v2 AccessToken supplied by the caller.
+    # Obtain it via the challenge → authenticate → redeem flow documented at
+    # https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
+    # Pass as KSEF_SESSION_TOKEN env var or via the session_token tool parameter.
     session_token: str = ""
 
     # NIP of the entity on whose behalf requests are sent (required by KSeF API).

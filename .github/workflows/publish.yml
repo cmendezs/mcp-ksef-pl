@@ -5,24 +5,76 @@ on:
     tags:
       - "v*"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
-  publish:
+  audit:
+    name: Audit gate
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # OIDC trusted publishing
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install package and dev dependencies
+        run: uv sync --all-extras
+
+      - name: Run pre-publish audit
+        run: uv run python audit/audit_vs_core.py --fail-on blocking
+
+  build:
+    name: Build distribution
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build package
+        run: uv build --no-sources
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
         with:
-          python-version: "3.12"
+          name: dist
+          path: dist/
 
-      - name: Install build tools
-        run: pip install build
-
-      - name: Build
-        run: python -m build
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for OIDC trusted publishing (no API key needed)
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

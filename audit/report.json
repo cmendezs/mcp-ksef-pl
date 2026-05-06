@@ -1,0 +1,738 @@
+{
+  "generated_at": "2026-05-05T21:28:06.163955+00:00",
+  "pkg_version": "0.1.0",
+  "core_version": "0.3.0",
+  "core_version_compatible": true,
+  "exit_code": 1,
+  "total_blocking": 0,
+  "total_warnings": 45,
+  "checks": [
+    {
+      "check_id": "CHECK_1",
+      "name": "Core interface coverage",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "blocking_count": 0,
+      "warning_count": 44,
+      "findings": [
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BaseDocumentGenerator",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BaseDocumentParser",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BaseDocumentValidator",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BaseLifecycleManager",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BasePartyValidator",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EInvoicingMCPServer",
+          "message": "Core symbol 'EInvoicingMCPServer' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EInvoicingError",
+          "message": "Core symbol 'EInvoicingError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.ValidationError",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PartyValidationError",
+          "message": "Core symbol 'PartyValidationError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.DocumentGenerationError",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.XSDValidationError",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.SchematronValidationError",
+          "message": "Core symbol 'SchematronValidationError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.AuthenticationError",
+          "message": "Core symbol 'AuthenticationError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.PlatformError",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.AuthMode",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.BaseEInvoicingClient",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.OAuthConfig",
+          "message": "Core symbol 'OAuthConfig' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.TokenCache",
+          "message": "Core symbol 'TokenCache' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.TaxIdentifier",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.PartyAddress",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.InvoiceParty",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.InvoiceLineItem",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.VATSummary",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PaymentTerms",
+          "message": "Core symbol 'PaymentTerms' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.InvoiceDocument",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.DocumentValidationResult",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931Address",
+          "message": "Core symbol 'EN16931Address' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931Party",
+          "message": "Core symbol 'EN16931Party' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931Tax",
+          "message": "Core symbol 'EN16931Tax' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931AllowanceCharge",
+          "message": "Core symbol 'EN16931AllowanceCharge' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931LineItem",
+          "message": "Core symbol 'EN16931LineItem' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931PaymentMeans",
+          "message": "Core symbol 'EN16931PaymentMeans' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.EN16931Invoice",
+          "message": "Core symbol 'EN16931Invoice' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.ValidationMessage",
+          "message": "Core symbol 'ValidationMessage' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.ValidationResult",
+          "message": "Core symbol 'ValidationResult' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.SchematronValidator",
+          "message": "Core symbol 'SchematronValidator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PeppolEnvironment",
+          "message": "Core symbol 'PeppolEnvironment' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PeppolParticipantId",
+          "message": "Core symbol 'PeppolParticipantId' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PeppolServiceInfo",
+          "message": "Core symbol 'PeppolServiceInfo' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PeppolLookupResult",
+          "message": "Core symbol 'PeppolLookupResult' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PeppolSMPClient",
+          "message": "Core symbol 'PeppolSMPClient' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.ProfileEntry",
+          "message": "Core symbol 'ProfileEntry' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.ProfileRegistry",
+          "message": "Core symbol 'ProfileRegistry' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.InvoiceFixtureFactory",
+          "message": "Core symbol 'InvoiceFixtureFactory' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.PDFEmbedder",
+          "message": "Core symbol 'PDFEmbedder' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.DownloadSpec",
+          "message": "Core symbol 'DownloadSpec' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.download_artefacts",
+          "message": "Core symbol 'download_artefacts' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.format_amount",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.format_quantity",
+          "message": "Core symbol 'format_quantity' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.validate_date_iso",
+          "message": "Core symbol 'validate_date_iso' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.validate_iban",
+          "message": "Core symbol 'validate_iban' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.xml_element",
+          "message": "Core symbol 'xml_element' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.xml_optional",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.format_error",
+          "message": "Core symbol 'format_error' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.filter_empty_values",
+          "message": "Core symbol 'filter_empty_values' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.resolve_xml_input",
+          "message": "Core symbol 'resolve_xml_input' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.BaseModel",
+          "message": "Core symbol 'BaseModel' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.Decimal",
+          "message": "Core symbol 'Decimal' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.DocumentValidationResult",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.Field",
+          "message": "Core symbol 'Field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.InvoiceDocument",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.InvoiceLineItem",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.InvoiceParty",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.PartyAddress",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.PaymentTerms",
+          "message": "Core symbol 'PaymentTerms' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.TaxIdentifier",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.models.VATSummary",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.field_validator",
+          "message": "Core symbol 'field_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.models.model_validator",
+          "message": "Core symbol 'model_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[SKIP]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.validators",
+          "message": "Could not import core module: No module named 'mcp_einvoicing_core.validators'"
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[SKIP]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.tools",
+          "message": "Could not import core module: No module named 'mcp_einvoicing_core.tools'"
+        }
+      ]
+    },
+    {
+      "check_id": "CHECK_2",
+      "name": "Tool registry completeness",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "blocking_count": 0,
+      "warning_count": 0,
+      "findings": [
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "generate_fa2_invoice",
+          "message": "Tool 'generate_fa2_invoice' is present. (Generate KSeF FA(2) XML from invoice data)"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "validate_fa2_invoice",
+          "message": "Tool 'validate_fa2_invoice' is present. (XSD + business-rule validation of FA(2))"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "parse_fa2_invoice",
+          "message": "Tool 'parse_fa2_invoice' is present. (Parse FA(2) XML to structured dict)"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "submit_invoice_to_ksef",
+          "message": "Tool 'submit_invoice_to_ksef' is present. (Submit to KSeF platform, return reference number)"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "get_ksef_invoice_status",
+          "message": "Tool 'get_ksef_invoice_status' is present. (Poll processing status by reference number)"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "search_ksef_invoices",
+          "message": "Tool 'search_ksef_invoices' is present. (Query KSeF by date range and subject type)"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "validate_polish_nip",
+          "message": "Tool 'validate_polish_nip' is present. (Validate 10-digit Polish NIP (checksum))"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "validate_polish_regon",
+          "message": "Tool 'validate_polish_regon' is present. (Validate 9- or 14-digit Polish REGON (checksum))"
+        },
+        {
+          "check_id": "CHECK_2",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "generate_peppol_invoice",
+          "message": "Tool 'generate_peppol_invoice' is present. (Generate Peppol BIS 3.0 / EN 16931 UBL 2.1)"
+        }
+      ]
+    },
+    {
+      "check_id": "CHECK_3",
+      "name": "Core model field availability",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "blocking_count": 0,
+      "warning_count": 0,
+      "findings": [
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.InvoiceDocument",
+          "message": "InvoiceDocument is available from core."
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.number",
+          "message": "Required field present. BT-1  \u2014 Invoice number"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.date",
+          "message": "Required field present. BT-2  \u2014 Invoice issue date"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.currency",
+          "message": "Required field present. BT-5  \u2014 Invoice currency"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.seller",
+          "message": "Required field present. BG-4  \u2014 Seller party"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.buyer",
+          "message": "Required field present. BG-7  \u2014 Buyer party"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.lines",
+          "message": "Required field present. BG-25 \u2014 Invoice lines"
+        },
+        {
+          "check_id": "CHECK_3",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "InvoiceDocument.vat_summary",
+          "message": "Required field present. BG-23 \u2014 VAT breakdown"
+        }
+      ]
+    },
+    {
+      "check_id": "CHECK_4",
+      "name": "Version compatibility",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "blocking_count": 0,
+      "warning_count": 0,
+      "findings": [
+        {
+          "check_id": "CHECK_4",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp-einvoicing-core",
+          "message": "Installed: 0.3.0 | Declared range: >=0.1.0,<1.0.0 | Compatible: True"
+        }
+      ]
+    },
+    {
+      "check_id": "CHECK_5",
+      "name": "KSeF-specific structural checks",
+      "passed": true,
+      "skipped": false,
+      "skip_reason": "",
+      "blocking_count": 0,
+      "warning_count": 1,
+      "findings": [
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "server.main",
+          "message": "server.main is present."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "server.mcp",
+          "message": "server.mcp is present."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "server.mcp",
+          "message": "server.mcp is a FastMCP instance."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "KSeFEnvironment.DEMO",
+          "message": "Environment variant defined."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "KSeFEnvironment.PRODUCTION",
+          "message": "Environment variant defined."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "KSeFEnvironment.TEST",
+          "message": "Environment variant defined."
+        },
+        {
+          "check_id": "CHECK_5",
+          "tag": "[MISSING_SCHEMA]",
+          "severity": "WARNING",
+          "symbol": "src/mcp_ksef_pl/schemas/",
+          "message": "schemas/ directory exists but contains no .xsd files. FA(2) XSD validation will be skipped at runtime. [NEED: download FA_VAT_v1-0E.xsd from the Polish Ministry of Finance and place it in src/mcp_ksef_pl/schemas/]"
+        }
+      ]
+    }
+  ]
+}

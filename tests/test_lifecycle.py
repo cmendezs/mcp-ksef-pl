@@ -1,84 +1,41 @@
-"""Tests for KSeF lifecycle manager (HTTP mocked)."""
+"""Tests for KSeF v2 lifecycle manager (HTTP mocked)."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from mcp_ksef_pl.config import KSeFEnvironment, KSeFSettings
-from mcp_ksef_pl.lifecycle import KSeFLifecycleManager
+from mcp_ksef_pl.lifecycle import KSeFLifecycleManager, _pick_encryption_cert, _to_iso_datetime
 
 
 @pytest.fixture
 def test_settings() -> KSeFSettings:
     return KSeFSettings(
         environment=KSeFEnvironment.TEST,
-        session_token="test-session-token-abc123",
+        session_token="test-access-token-abc123",
         nip="5261040828",
     )
 
 
-class TestKSeFLifecycleManager:
-    @pytest.mark.asyncio
-    async def test_submit_returns_reference(
-        self, test_settings: KSeFSettings, sample_fa2_xml: str
-    ) -> None:
-        manager = KSeFLifecycleManager(test_settings)
-        with patch.object(manager._client, "send_invoice", new_callable=AsyncMock) as mock_send, \
-             patch.object(manager._client, "terminate_session", new_callable=AsyncMock):
-            mock_send.return_value = {"elementReferenceNumber": "REF-2024-001"}
-            reference = await manager.submit_document(
-                sample_fa2_xml, {"terminate_after": True}
-            )
-        assert reference == "REF-2024-001"
-
-    @pytest.mark.asyncio
-    async def test_submit_without_token_raises(self) -> None:
-        from mcp_einvoicing_core import PlatformError
-
-        settings = KSeFSettings(environment=KSeFEnvironment.TEST, session_token="")
-        manager = KSeFLifecycleManager(settings)
-        with pytest.raises(PlatformError, match="session token"):
-            await manager.submit_document("<Faktura/>", {})
-
-    @pytest.mark.asyncio
-    async def test_get_document_status(self, test_settings: KSeFSettings) -> None:
-        manager = KSeFLifecycleManager(test_settings)
-        mock_response = {"processingCode": 200, "processingDescription": "Accepted"}
-        with patch.object(manager._client, "get_invoice_status", new_callable=AsyncMock) as mock_status:
-            mock_status.return_value = mock_response
-            result = await manager.get_document_status("REF-2024-001")
-        assert result["processingCode"] == 200
-
-    @pytest.mark.asyncio
-    async def test_search_documents(self, test_settings: KSeFSettings) -> None:
-        manager = KSeFLifecycleManager(test_settings)
-        mock_response = {"invoiceHeaderList": [{"ksefReferenceNumber": "REF-001"}]}
-        with patch.object(manager._client, "query_invoices", new_callable=AsyncMock) as mock_query:
-            mock_query.return_value = mock_response
-            results = await manager.search_documents(
-                {"date_from": "2024-01-01", "date_to": "2024-01-31"}
-            )
-        assert len(results) == 1
-        assert results[0]["ksefReferenceNumber"] == "REF-001"
-
-
 @pytest.fixture
-def sample_fa2_xml() -> str:
+def sample_fa3_xml() -> str:
+    # Minimal FA(3) XML — structure mirrors FA(2) but with updated header codes.
+    # [NEED] Replace with a full FA(3) XML once the FA(3) generator is implemented.
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/">'
+        '<Faktura xmlns="http://crd.gov.pl/wzor/2025/09/11/12648/">'
         "<Naglowek>"
-        '<KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>'
-        "<WariantFormularza>2</WariantFormularza>"
-        "<DataWytworzenieFa>2024-03-15T12:00:00Z</DataWytworzenieFa>"
+        '<KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>'
+        "<WariantFormularza>3</WariantFormularza>"
+        "<DataWytworzenieFa>2026-03-15T12:00:00Z</DataWytworzenieFa>"
         "<SystemInfo>mcp-ksef-pl/0.1.0</SystemInfo>"
         "</Naglowek>"
         "<Podmiot1><DaneIdentyfikacyjne><NIP>5261040828</NIP>"
         "<Nazwa>Ministerstwo Finansów</Nazwa></DaneIdentyfikacyjne></Podmiot1>"
         "<Podmiot2><DaneIdentyfikacyjne><NIP>5260250274</NIP>"
         "<Nazwa>Nabywca</Nazwa></DaneIdentyfikacyjne></Podmiot2>"
-        "<Fa><KodWaluty>PLN</KodWaluty><P_1>2024-03-15</P_1>"
-        "<P_2>FV/2024/001</P_2><P_13_1>2000.00</P_13_1>"
+        "<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-03-15</P_1>"
+        "<P_2>FV/2026/001</P_2><P_13_1>2000.00</P_13_1>"
         "<P_14_1>460.00</P_14_1><P_15>2460.00</P_15>"
         "<Adnotacje><P_16>2</P_16><P_17>2</P_17><P_18>2</P_18>"
         "<P_18A>2</P_18A><P_23>2</P_23></Adnotacje>"
@@ -88,3 +45,232 @@ def sample_fa2_xml() -> str:
         "</FaWiersz></FaWiersze></Fa>"
         "</Faktura>"
     )
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+class TestPickEncryptionCert:
+    def test_picks_symmetric_key_cert(self) -> None:
+        certs = [
+            {"certificate": "cert1==", "usage": ["KsefTokenEncryption"]},
+            {"certificate": "cert2==", "usage": ["SymmetricKeyEncryption"]},
+        ]
+        assert _pick_encryption_cert(certs) == "cert2=="
+
+    def test_raises_when_none_found(self) -> None:
+        from mcp_einvoicing_core import PlatformError
+
+        certs = [{"certificate": "cert1==", "usage": ["KsefTokenEncryption"]}]
+        with pytest.raises(PlatformError, match="SymmetricKeyEncryption"):
+            _pick_encryption_cert(certs)
+
+    def test_raises_on_empty_list(self) -> None:
+        from mcp_einvoicing_core import PlatformError
+
+        with pytest.raises(PlatformError):
+            _pick_encryption_cert([])
+
+
+class TestToIsoDatetime:
+    def test_date_only_start(self) -> None:
+        assert _to_iso_datetime("2026-01-15", end=False) == "2026-01-15T00:00:00+00:00"
+
+    def test_date_only_end(self) -> None:
+        assert _to_iso_datetime("2026-01-15", end=True) == "2026-01-15T23:59:59+00:00"
+
+    def test_full_iso_passthrough(self) -> None:
+        dt = "2026-01-15T12:30:00+00:00"
+        assert _to_iso_datetime(dt, end=False) == dt
+
+
+# ---------------------------------------------------------------------------
+# KSeFLifecycleManager — submit
+# ---------------------------------------------------------------------------
+
+class TestSubmitDocument:
+    @pytest.mark.asyncio
+    async def test_submit_returns_compound_reference(
+        self, test_settings: KSeFSettings, sample_fa3_xml: str
+    ) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+
+        # Build a minimal fake RSA public key that satisfies load_mf_public_key.
+        # We mock the entire _encryption pipeline to avoid needing a real cert.
+        fake_envelope = MagicMock()
+        fake_envelope.encrypted_symmetric_key = "encKey=="
+        fake_envelope.initialization_vector = "iv=="
+        fake_envelope.build_send_payload.return_value = {
+            "invoiceHash": "abc==",
+            "invoiceSize": 100,
+            "encryptedInvoiceHash": "def==",
+            "encryptedInvoiceSize": 128,
+            "encryptedInvoiceContent": "ghi==",
+        }
+
+        fake_certs = [{"certificate": "CERT==", "usage": ["SymmetricKeyEncryption"]}]
+
+        with (
+            patch.object(
+                manager._client, "get_public_key_certificates",
+                new_callable=AsyncMock, return_value=fake_certs,
+            ),
+            patch(
+                "mcp_ksef_pl.lifecycle.load_mf_public_key",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "mcp_ksef_pl.lifecycle.InvoiceEnvelope",
+                return_value=fake_envelope,
+            ),
+            patch.object(
+                manager._client, "open_online_session",
+                new_callable=AsyncMock, return_value="SESSION-REF-001",
+            ),
+            patch.object(
+                manager._client, "send_invoice_to_session",
+                new_callable=AsyncMock, return_value="INVOICE-REF-001",
+            ),
+            patch.object(
+                manager._client, "close_online_session",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await manager.submit_document(sample_fa3_xml, {})
+
+        assert result == "SESSION-REF-001:INVOICE-REF-001"
+
+    @pytest.mark.asyncio
+    async def test_submit_without_token_raises(self) -> None:
+        from mcp_einvoicing_core import PlatformError
+
+        settings = KSeFSettings(environment=KSeFEnvironment.TEST, session_token="")
+        manager = KSeFLifecycleManager(settings)
+        with pytest.raises(PlatformError, match="AccessToken"):
+            await manager.submit_document("<Faktura/>", {})
+
+    @pytest.mark.asyncio
+    async def test_submit_session_close_failure_is_non_fatal(
+        self, test_settings: KSeFSettings, sample_fa3_xml: str
+    ) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+
+        fake_envelope = MagicMock()
+        fake_envelope.encrypted_symmetric_key = "encKey=="
+        fake_envelope.initialization_vector = "iv=="
+        fake_envelope.build_send_payload.return_value = {
+            "invoiceHash": "abc==", "invoiceSize": 100,
+            "encryptedInvoiceHash": "def==", "encryptedInvoiceSize": 128,
+            "encryptedInvoiceContent": "ghi==",
+        }
+
+        with (
+            patch.object(
+                manager._client, "get_public_key_certificates",
+                new_callable=AsyncMock,
+                return_value=[{"certificate": "CERT==", "usage": ["SymmetricKeyEncryption"]}],
+            ),
+            patch("mcp_ksef_pl.lifecycle.load_mf_public_key", return_value=MagicMock()),
+            patch("mcp_ksef_pl.lifecycle.InvoiceEnvelope", return_value=fake_envelope),
+            patch.object(
+                manager._client, "open_online_session",
+                new_callable=AsyncMock, return_value="SESSION-001",
+            ),
+            patch.object(
+                manager._client, "send_invoice_to_session",
+                new_callable=AsyncMock, return_value="INV-001",
+            ),
+            patch.object(
+                manager._client, "close_online_session",
+                new_callable=AsyncMock, side_effect=Exception("network timeout"),
+            ),
+        ):
+            result = await manager.submit_document(sample_fa3_xml, {})
+
+        # Session close failed but we still get the compound reference.
+        assert result == "SESSION-001:INV-001"
+
+
+# ---------------------------------------------------------------------------
+# KSeFLifecycleManager — status
+# ---------------------------------------------------------------------------
+
+class TestGetDocumentStatus:
+    @pytest.mark.asyncio
+    async def test_compound_ref_calls_invoice_status(
+        self, test_settings: KSeFSettings
+    ) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+        expected = {"status": {"code": 200, "description": "Accepted"}}
+
+        with patch.object(
+            manager._client, "get_invoice_status",
+            new_callable=AsyncMock, return_value=expected,
+        ) as mock_status:
+            result = await manager.get_document_status("SESSION-001:INV-001")
+
+        mock_status.assert_called_once_with("SESSION-001", "INV-001")
+        assert result == expected
+
+    @pytest.mark.asyncio
+    async def test_session_only_ref_calls_session_status(
+        self, test_settings: KSeFSettings
+    ) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+        expected = {"status": "processed", "invoiceCount": 1}
+
+        with patch.object(
+            manager._client, "get_session_status",
+            new_callable=AsyncMock, return_value=expected,
+        ) as mock_status:
+            result = await manager.get_document_status("SESSION-001")
+
+        mock_status.assert_called_once_with("SESSION-001")
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# KSeFLifecycleManager — search
+# ---------------------------------------------------------------------------
+
+class TestSearchDocuments:
+    @pytest.mark.asyncio
+    async def test_search_builds_v2_payload(self, test_settings: KSeFSettings) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+        mock_response = {"invoices": [{"ksefNumber": "REF-001"}], "hasMore": False}
+
+        with patch.object(
+            manager._client, "query_invoices",
+            new_callable=AsyncMock, return_value=mock_response,
+        ) as mock_query:
+            results = await manager.search_documents(
+                {
+                    "date_from": "2026-01-01",
+                    "date_to": "2026-01-31",
+                    "subject_type": "Subject2",
+                    "date_type": "Issue",
+                }
+            )
+
+        called_payload = mock_query.call_args[0][0]
+        assert called_payload["subjectType"] == "Subject2"
+        assert called_payload["dateRange"]["dateType"] == "Issue"
+        assert called_payload["dateRange"]["from"] == "2026-01-01T00:00:00+00:00"
+        assert called_payload["dateRange"]["to"] == "2026-01-31T23:59:59+00:00"
+        assert len(results) == 1
+        assert results[0]["ksefNumber"] == "REF-001"
+
+    @pytest.mark.asyncio
+    async def test_search_defaults(self, test_settings: KSeFSettings) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+
+        with patch.object(
+            manager._client, "query_invoices",
+            new_callable=AsyncMock, return_value={"invoices": []},
+        ) as mock_query:
+            await manager.search_documents({})
+
+        payload = mock_query.call_args[0][0]
+        assert payload["subjectType"] == "Subject1"
+        assert payload["dateRange"]["dateType"] == "Invoicing"
