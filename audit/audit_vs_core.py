@@ -196,9 +196,67 @@ def _version_in_range(version: str, spec: str) -> bool:
 # CHECK 1 — Core interface coverage
 # ---------------------------------------------------------------------------
 
-# Symbols mcp-ksef-pl intentionally overrides rather than importing from core.
-# [NEED: populate once mcp-einvoicing-core public API is finalised]
-_INTENTIONAL_OVERRIDES: dict[str, set[str]] = {}
+# Symbols exported by mcp-einvoicing-core that mcp-ksef-pl deliberately does
+# not import because they are not needed for the KSeF / Peppol use-case.
+#
+# EInvoicingMCPServer  — package uses FastMCP directly (standalone server)
+# OAuthConfig/TokenCache — uses BEARER_TOKEN auth; no OAuth2 client_credentials
+# SchematronValidator  — uses custom XSD + business-rule validator
+# EN16931*/PaymentTerms — EN 16931 helper models not needed in FA(2)/FA(3) generators
+# Peppol*/ProfileRegistry — Peppol lookup not used (Peppol UBL generation is self-contained)
+# PDFEmbedder/DownloadSpec/download_artefacts — not applicable to KSeF
+# BaseModel/Decimal/Field/model_validator/field_validator — used indirectly via Pydantic
+# ValidationMessage/ValidationResult — uses DocumentValidationResult from core instead
+# InvoiceFixtureFactory — test helper not used in this package's test suite
+# format_error/filter_empty_values/resolve_xml_input — utility functions not needed
+# format_quantity/validate_date_iso/validate_iban/xml_element — not used
+# EInvoicingError/PartyValidationError/SchematronValidationError/AuthenticationError
+#   — uses PlatformError and DocumentGenerationError from core instead
+_INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
+    "mcp_einvoicing_core": {
+        "AuthenticationError",
+        "BaseModel",
+        "Decimal",
+        "DownloadSpec",
+        "EInvoicingError",
+        "EInvoicingMCPServer",
+        "EN16931Address",
+        "EN16931AllowanceCharge",
+        "EN16931Invoice",
+        "EN16931LineItem",
+        "EN16931Party",
+        "EN16931PaymentMeans",
+        "EN16931Tax",
+        "Field",
+        "InvoiceFixtureFactory",
+        "OAuthConfig",
+        "PDFEmbedder",
+        "PartyValidationError",
+        "PaymentTerms",
+        "PeppolEnvironment",
+        "PeppolLookupResult",
+        "PeppolParticipantId",
+        "PeppolSMPClient",
+        "PeppolServiceInfo",
+        "ProfileEntry",
+        "ProfileRegistry",
+        "SchematronValidationError",
+        "SchematronValidator",
+        "TokenCache",
+        "ValidationMessage",
+        "ValidationResult",
+        "download_artefacts",
+        "field_validator",
+        "filter_empty_values",
+        "format_error",
+        "format_quantity",
+        "model_validator",
+        "resolve_xml_input",
+        "validate_date_iso",
+        "validate_iban",
+        "xml_element",
+    },
+}
 
 _CORE_MODULES_TO_CHECK: list[str] = [
     "mcp_einvoicing_core",
@@ -615,7 +673,9 @@ def run_check_5() -> CheckResult:
                 message="KSeFEnvironment enum not found in mcp_ksef_pl.config.",
             ))
         else:
-            required_envs = {"PRODUCTION", "TEST", "DEMO"}
+            # DEMO was removed in the KSeF API v2 migration — v2 exposes only
+            # production and test endpoints.  Only PRODUCTION and TEST are required.
+            required_envs = {"PRODUCTION", "TEST"}
             actual_envs = {e.name for e in env_cls}
             for env in sorted(required_envs):
                 tag = "[OK]" if env in actual_envs else "[MISSING_ENV]"
