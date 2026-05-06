@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/schema/server-detail.schema.json",
   "name": "io.github.cmendezs/mcp-ksef-pl",
-  "description": "MCP server for Polish electronic invoicing: KSeF (FA(2) national format) and Peppol/EN 16931 UBL. Generates, validates, parses, and submits e-invoices to the Polish KSeF platform.",
+  "description": "MCP server for Polish electronic invoicing: KSeF API v2 (FA(3) format), FA(2) validation, and Peppol/EN 16931 UBL. Generates, validates, parses, and submits e-invoices to the Polish KSeF platform with AES-256 encrypted session-based submission.",
   "version": "0.1.0",
   "registry": {
     "type": "pypi",
@@ -16,6 +16,7 @@
     "peppol",
     "en16931",
     "fa2",
+    "fa3",
     "ubl",
     "vat",
     "mcp",
@@ -24,8 +25,12 @@
   ],
   "tools": [
     {
+      "name": "generate_fa3_invoice",
+      "description": "Generate a KSeF FA(3) XML invoice for submission via KSeF API v2. FA(3) is required for all new submissions; use this before calling submit_invoice_to_ksef."
+    },
+    {
       "name": "generate_fa2_invoice",
-      "description": "Generate a KSeF-compliant FA(2) XML invoice from structured invoice data."
+      "description": "Generate a KSeF FA(2) XML invoice (legacy format). Use for validation and parsing workflows; KSeF API v2 requires FA(3) for new submissions."
     },
     {
       "name": "validate_fa2_invoice",
@@ -37,11 +42,11 @@
     },
     {
       "name": "submit_invoice_to_ksef",
-      "description": "Submit a FA(2) XML invoice to the KSeF platform and return the reference number."
+      "description": "Submit a FA(3) XML invoice to KSeF API v2 using AES-256-CBC encrypted session-based submission. Returns session and invoice reference numbers."
     },
     {
       "name": "get_ksef_invoice_status",
-      "description": "Retrieve the processing status of a previously submitted KSeF invoice."
+      "description": "Retrieve the processing status of a submitted KSeF invoice using the compound reference number returned by submit_invoice_to_ksef."
     },
     {
       "name": "search_ksef_invoices",
