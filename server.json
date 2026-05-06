@@ -1,68 +1,46 @@
 {
-  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/schema/server-detail.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.cmendezs/mcp-ksef-pl",
-  "description": "MCP server for Polish electronic invoicing: KSeF API v2 (FA(3) format), FA(2) validation, and Peppol/EN 16931 UBL. Generates, validates, parses, and submits e-invoices to the Polish KSeF platform with AES-256 encrypted session-based submission.",
-  "version": "0.1.0",
-  "registry": {
-    "type": "pypi",
-    "package": "mcp-ksef-pl"
+  "description": "Polish e-invoicing MCP: KSeF API v2, FA(3)/FA(2) XML, Peppol BIS 3.0, NIP/REGON validation.",
+  "repository": {
+    "url": "https://github.com/cmendezs/mcp-ksef-pl",
+    "source": "github"
   },
-  "transports": ["stdio"],
-  "categories": ["finance"],
-  "tags": [
-    "e-invoicing",
-    "ksef",
-    "poland",
-    "peppol",
-    "en16931",
-    "fa2",
-    "fa3",
-    "ubl",
-    "vat",
-    "mcp",
-    "b2b",
-    "b2g"
-  ],
-  "tools": [
+  "version": "0.1.0",
+  "packages": [
     {
-      "name": "generate_fa3_invoice",
-      "description": "Generate a KSeF FA(3) XML invoice for submission via KSeF API v2. FA(3) is required for all new submissions; use this before calling submit_invoice_to_ksef."
-    },
-    {
-      "name": "generate_fa2_invoice",
-      "description": "Generate a KSeF FA(2) XML invoice (legacy format). Use for validation and parsing workflows; KSeF API v2 requires FA(3) for new submissions."
-    },
-    {
-      "name": "validate_fa2_invoice",
-      "description": "Validate a KSeF FA(2) XML invoice against the official XSD schema and business rules."
-    },
-    {
-      "name": "parse_fa2_invoice",
-      "description": "Parse a KSeF FA(2) XML invoice into a structured dictionary."
-    },
-    {
-      "name": "submit_invoice_to_ksef",
-      "description": "Submit a FA(3) XML invoice to KSeF API v2 using AES-256-CBC encrypted session-based submission. Returns session and invoice reference numbers."
-    },
-    {
-      "name": "get_ksef_invoice_status",
-      "description": "Retrieve the processing status of a submitted KSeF invoice using the compound reference number returned by submit_invoice_to_ksef."
-    },
-    {
-      "name": "search_ksef_invoices",
-      "description": "Query invoices stored in KSeF using date range and other filters."
-    },
-    {
-      "name": "validate_polish_nip",
-      "description": "Validate a Polish NIP (tax identification number) using the official checksum algorithm."
-    },
-    {
-      "name": "validate_polish_regon",
-      "description": "Validate a Polish REGON (business registry number) — 9 or 14 digits."
-    },
-    {
-      "name": "generate_peppol_invoice",
-      "description": "Generate a Peppol BIS Billing 3.0 UBL 2.1 XML invoice (EN 16931 compliant) for cross-border B2B trade."
+      "registryType": "pypi",
+      "identifier": "mcp-ksef-pl",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "KSEF_SESSION_TOKEN",
+          "description": "KSeF v2 AccessToken obtained via the challenge/redeem auth flow. Required for submit_invoice_to_ksef.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "KSEF_NIP",
+          "description": "NIP (Polish tax identifier, 10 digits) of the entity submitting invoices.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "KSEF_ENVIRONMENT",
+          "description": "Target KSeF environment: 'production' or 'test' (default: test).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "KSEF_TIMEOUT",
+          "description": "HTTP request timeout in seconds (default: 30).",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
     }
   ]
 }
