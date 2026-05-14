@@ -54,6 +54,7 @@ from mcp_einvoicing_core import (
     BaseEInvoicingClient,
     BaseLifecycleManager,
     PlatformError,
+    SubmitResult,
 )
 from mcp_einvoicing_core.logging_utils import get_logger
 
@@ -208,7 +209,11 @@ class KSeFLifecycleManager(BaseLifecycleManager):
     # BaseLifecycleManager implementation
     # ------------------------------------------------------------------
 
-    async def submit_document(self, xml: str, metadata: dict[str, Any]) -> str:
+    async def submit_document(  # type: ignore[override]
+        self,
+        document: bytes | str,
+        metadata: dict[str, Any],
+    ) -> SubmitResult:
         """Submit a FA(3) XML invoice to KSeF v2.
 
         Internally: fetches MF public key, opens session, sends encrypted
@@ -220,8 +225,10 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         form_code       : dict, optional — overrides the default FA(3) formCode
 
         Returns:
-            "{sessionRef}:{invoiceRef}" — pass this to get_document_status.
+            SubmitResult with session_ref and invoice_ref populated.
+            Pass result.compound_id to get_document_status.
         """
+        xml = document if isinstance(document, str) else document.decode("utf-8")
         if token := metadata.get("session_token"):
             self._client.update_access_token(token)
 
@@ -273,16 +280,19 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                 "Session close failed (non-fatal, invoice was accepted): %s", exc
             )
 
-        # Return compound reference understood by get_document_status.
-        return f"{session_ref}:{invoice_ref}"
+        return SubmitResult(
+            invoice_ref=invoice_ref,
+            session_ref=session_ref,
+            status="submitted",
+        )
 
     async def get_document_status(self, document_id: str) -> dict[str, Any]:
         """Get the status of a submitted invoice.
 
         Args:
-            document_id: Either the compound "{sessionRef}:{invoiceRef}" string
-                         returned by submit_document, or just a sessionRef to get
-                         the overall session status.
+            document_id: Pass ``result.compound_id`` from a SubmitResult, or any
+                         ``"{sessionRef}:{invoiceRef}"`` compound string.  Pass a
+                         bare sessionRef (no colon) to get the overall session status.
         """
         if ":" in document_id:
             session_ref, invoice_ref = document_id.split(":", 1)
