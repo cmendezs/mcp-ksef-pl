@@ -9,7 +9,6 @@ from mcp_einvoicing_core import (
     InvoiceParty,
     VATSummary,
     format_amount,
-    xml_optional,
 )
 from mcp_einvoicing_core.xml_utils import xml_escape
 
@@ -36,12 +35,22 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
     if party.address:
         a = party.address
         addr = (
-            f"        <cac:PostalAddress>\n"
-            + (f"          <cbc:StreetName>{xml_escape(a.street or '')}</cbc:StreetName>\n" if a.street else "")
-            + (f"          <cbc:CityName>{xml_escape(a.city or '')}</cbc:CityName>\n" if a.city else "")
-            + (f"          <cbc:PostalZone>{xml_escape(a.postal_code or '')}</cbc:PostalZone>\n" if a.postal_code else "")
-            + f"          <cac:Country>\n"
-            f"            <cbc:IdentificationCode>{xml_escape(a.country_code.upper())}</cbc:IdentificationCode>\n"
+            "        <cac:PostalAddress>\n"
+            + (
+                f"          <cbc:StreetName>{xml_escape(a.street or '')}</cbc:StreetName>\n"
+                if a.street else ""
+            )
+            + (
+                f"          <cbc:CityName>{xml_escape(a.city or '')}</cbc:CityName>\n"
+                if a.city else ""
+            )
+            + (
+                f"          <cbc:PostalZone>{xml_escape(a.postal_code or '')}</cbc:PostalZone>\n"
+                if a.postal_code else ""
+            )
+            + "          <cac:Country>\n"
+            f"            <cbc:IdentificationCode>"
+            f"{xml_escape(a.country_code.upper())}</cbc:IdentificationCode>\n"
             f"          </cac:Country>\n"
             f"        </cac:PostalAddress>\n"
         )
@@ -66,13 +75,15 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
 def _tax_total(summaries: list[VATSummary], currency: str) -> str:
     total_tax = sum(s.vat_amount for s in summaries)
     subtotals = ""
+    cur = xml_escape(currency)
     for s in summaries:
         rate_str = _d(s.vat_rate)
         cat_id = "S" if s.vat_rate > 0 else ("E" if s.vat_exemption_code else "Z")
         subtotals += (
             f"    <cac:TaxSubtotal>\n"
-            f"      <cbc:TaxableAmount currencyID=\"{xml_escape(currency)}\">{_d(s.taxable_base)}</cbc:TaxableAmount>\n"
-            f"      <cbc:TaxAmount currencyID=\"{xml_escape(currency)}\">{_d(s.vat_amount)}</cbc:TaxAmount>\n"
+            f"      <cbc:TaxableAmount currencyID=\"{cur}\">"
+            f"{_d(s.taxable_base)}</cbc:TaxableAmount>\n"
+            f"      <cbc:TaxAmount currencyID=\"{cur}\">{_d(s.vat_amount)}</cbc:TaxAmount>\n"
             f"      <cac:TaxCategory>\n"
             f"        <cbc:ID>{cat_id}</cbc:ID>\n"
             f"        <cbc:Percent>{rate_str}</cbc:Percent>\n"
@@ -82,7 +93,7 @@ def _tax_total(summaries: list[VATSummary], currency: str) -> str:
         )
     return (
         f"  <cac:TaxTotal>\n"
-        f"    <cbc:TaxAmount currencyID=\"{xml_escape(currency)}\">{_d(total_tax)}</cbc:TaxAmount>\n"
+        f"    <cbc:TaxAmount currencyID=\"{cur}\">{_d(total_tax)}</cbc:TaxAmount>\n"
         f"{subtotals}"
         f"  </cac:TaxTotal>\n"
     )
@@ -93,14 +104,17 @@ def _monetary_total(invoice: InvoiceDocument) -> str:
     line_ext = sum(s.taxable_base for s in summaries)
     tax_excl = line_ext
     tax_incl = line_ext + sum(s.vat_amount for s in summaries)
-    cur = invoice.currency
+    esc_cur = xml_escape(invoice.currency)
 
     return (
         f"  <cac:LegalMonetaryTotal>\n"
-        f"    <cbc:LineExtensionAmount currencyID=\"{xml_escape(cur)}\">{_d(line_ext)}</cbc:LineExtensionAmount>\n"
-        f"    <cbc:TaxExclusiveAmount currencyID=\"{xml_escape(cur)}\">{_d(tax_excl)}</cbc:TaxExclusiveAmount>\n"
-        f"    <cbc:TaxInclusiveAmount currencyID=\"{xml_escape(cur)}\">{_d(tax_incl)}</cbc:TaxInclusiveAmount>\n"
-        f"    <cbc:PayableAmount currencyID=\"{xml_escape(cur)}\">{_d(tax_incl)}</cbc:PayableAmount>\n"
+        f"    <cbc:LineExtensionAmount currencyID=\"{esc_cur}\">"
+        f"{_d(line_ext)}</cbc:LineExtensionAmount>\n"
+        f"    <cbc:TaxExclusiveAmount currencyID=\"{esc_cur}\">"
+        f"{_d(tax_excl)}</cbc:TaxExclusiveAmount>\n"
+        f"    <cbc:TaxInclusiveAmount currencyID=\"{esc_cur}\">"
+        f"{_d(tax_incl)}</cbc:TaxInclusiveAmount>\n"
+        f"    <cbc:PayableAmount currencyID=\"{esc_cur}\">{_d(tax_incl)}</cbc:PayableAmount>\n"
         f"  </cac:LegalMonetaryTotal>\n"
     )
 
@@ -161,14 +175,15 @@ class PeppolUBLGenerator(BaseDocumentGenerator):
                 f"  <cbc:ID>{xml_escape(invoice.number)}</cbc:ID>\n"
                 f"  <cbc:IssueDate>{xml_escape(str(invoice.date))}</cbc:IssueDate>\n"
                 f"  <cbc:InvoiceTypeCode>{invoice_type_code}</cbc:InvoiceTypeCode>\n"
-                f"  <cbc:DocumentCurrencyCode>{xml_escape(invoice.currency)}</cbc:DocumentCurrencyCode>\n"
+                f"  <cbc:DocumentCurrencyCode>"
+                f"{xml_escape(invoice.currency)}</cbc:DocumentCurrencyCode>\n"
                 + (f"  <cbc:Note>{xml_escape(invoice.note)}</cbc:Note>\n" if invoice.note else "")
                 + _party_block(invoice.seller, "cac:AccountingSupplierParty")
                 + _party_block(invoice.buyer, "cac:AccountingCustomerParty")
                 + _tax_total(invoice.vat_summary or [], invoice.currency)
                 + _monetary_total(invoice)
                 + _invoice_lines(invoice)
-                + f"</Invoice>\n"
+                + "</Invoice>\n"
             )
             return xml
         except Exception as exc:

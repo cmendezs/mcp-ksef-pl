@@ -44,13 +44,13 @@ from mcp_einvoicing_core.audit import (
 # CHECK 1 configuration — country-specific constants
 # ---------------------------------------------------------------------------
 
-# KSeF (FA(2)/FA(3)) is NOT EN 16931 family; it is a Polish national clearance
-# format. The Peppol BIS 3.0 output path uses EN16931Invoice internally, but the
-# primary document model for KSeF submission is InvoiceDocument-based.
-# Set to None to skip the canonical tree check pending full model-tree audit.
-# [Unverified: confirm which primary model class to assert against]
-_IS_EN16931_FAMILY: bool | None = None
-_PRIMARY_INVOICE_CLASS: tuple[str, str] | None = None
+# KSeFInvoice(EN16931Invoice) is the primary data model for KSeF FA(2)/FA(3).
+# Polish VAT invoices are semantically EN 16931 compliant; the KSeF XML schema is a
+# national serialisation format that generators map to from the EN 16931 data model.
+# The FA(2)/FA(3) generators in generator.py still accept InvoiceDocument during the
+# migration period; that is tracked in the roadmap under "KSeF generator migration".
+_IS_EN16931_FAMILY: bool = True
+_PRIMARY_INVOICE_CLASS: tuple[str, str] = ("mcp_ksef_pl.models", "KSeFInvoice")
 
 _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # KSeF uses standalone FastMCP; base ABC classes are not subclassed directly.
@@ -68,13 +68,13 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "XAdESEPESSigner",
         "XAdESSignerConfig",
     },
-    # KSeF FA(2)/FA(3) uses the InvoiceDocument tree, not EN16931Invoice.
+    # EN16931 classes are used via KSeFInvoice(EN16931Invoice) and KSeFParty(EN16931Party).
+    # The specific sub-classes (EN16931LineItem, EN16931PaymentMeans) are accessed through
+    # the EN16931Invoice base; the generators migrate to these field names incrementally.
     "mcp_einvoicing_core.en16931": {
         "EN16931Address",
         "EN16931AllowanceCharge",
-        "EN16931Invoice",
         "EN16931LineItem",
-        "EN16931Party",
         "EN16931PaymentMeans",
         "EN16931Tax",
     },
