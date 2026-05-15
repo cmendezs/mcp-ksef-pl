@@ -1,7 +1,7 @@
 """Tests for the FA(2) XML validator."""
 
 import pytest
-from mcp_einvoicing_core import InvoiceDocument, XSDValidationError
+from mcp_einvoicing_core import InvoiceDocument
 
 from mcp_ksef_pl.generator import FA2Generator
 from mcp_ksef_pl.validator import FA2Validator

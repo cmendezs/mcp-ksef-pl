@@ -7,7 +7,6 @@ to enable full XSD validation.  Without the file, only structural/business check
 """
 
 import re
-from importlib.resources import files
 from pathlib import Path
 
 from mcp_einvoicing_core import (
@@ -69,10 +68,11 @@ class FA2Validator(BaseDocumentValidator):
                 warnings.append(f"XSD validation skipped due to parse error: {exc}")
                 metadata["xsd_validated"] = False
         else:
-            warnings.append(
-                "XSD validation skipped: "
-                + ("lxml not installed." if not has_lxml else f"schema file not found at {_SCHEMA_FILENAME}.")
+            reason = (
+                "lxml not installed." if not has_lxml
+                else f"schema file not found at {_SCHEMA_FILENAME}."
             )
+            warnings.append("XSD validation skipped: " + reason)
             metadata["xsd_validated"] = False
 
         # --- Business rules (always run) ---

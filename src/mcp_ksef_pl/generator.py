@@ -60,9 +60,10 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
     nip = party.tax_id.identifier if party.tax_id.country_code.upper() == "PL" else ""
 
     id_block = f"<NIP>{xml_escape(nip)}</NIP>\n" if nip else ""
-    if party.alt_tax_id:
-        id_block += f"<KodUE>{xml_escape(party.tax_id.country_code.upper())}</KodUE>\n"
-        id_block += f"<NrVatUE>{xml_escape(party.alt_tax_id.identifier)}</NrVatUE>\n"
+    eu_vat = next((t for t in party.alt_tax_ids if t.country_code.upper() != "PL"), None)
+    if eu_vat:
+        id_block += f"<KodUE>{xml_escape(eu_vat.country_code.upper())}</KodUE>\n"
+        id_block += f"<NrVatUE>{xml_escape(eu_vat.identifier)}</NrVatUE>\n"
     id_block += f"<Nazwa>{xml_escape(name)}</Nazwa>\n"
 
     addr_block = ""
@@ -72,10 +73,13 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
             f"<Adres>\n"
             f"  <KodKraju>{xml_escape(a.country_code.upper())}</KodKraju>\n"
             f"  <AdresL1>{xml_escape(a.street or '')}</AdresL1>\n"
-            + (f"  <KodPocztowy>{xml_escape(a.postal_code)}</KodPocztowy>\n" if a.postal_code else "")
+            + (
+                f"  <KodPocztowy>{xml_escape(a.postal_code)}</KodPocztowy>\n"
+                if a.postal_code else ""
+            )
             + f"  <Miejscowosc>{xml_escape(a.city or '')}</Miejscowosc>\n"
             + (f"  <Wojewodztwo>{xml_escape(a.province)}</Wojewodztwo>\n" if a.province else "")
-            + f"</Adres>\n"
+            + "</Adres>\n"
         )
 
     return (
@@ -120,7 +124,10 @@ def _vat_summary_fields(summaries: list[VATSummary]) -> str:
 def _invoice_lines(invoice: InvoiceDocument) -> str:
     rows = []
     for line in invoice.lines:
-        rate_str = str(int(line.vat_rate)) if line.vat_rate == int(line.vat_rate) else str(line.vat_rate)
+        rate_str = (
+            str(int(line.vat_rate)) if line.vat_rate == int(line.vat_rate)
+            else str(line.vat_rate)
+        )
         rows.append(
             f"  <FaWiersz>\n"
             f"    <NrWierszaFa>{line.line_number}</NrWierszaFa>\n"
@@ -130,8 +137,11 @@ def _invoice_lines(invoice: InvoiceDocument) -> str:
             f"    <P_9A>{_d(line.unit_price)}</P_9A>\n"
             f"    <P_11>{_d(line.total_price)}</P_11>\n"
             f"    <P_12>{xml_escape(rate_str)}</P_12>\n"
-            + (f"    <P_12_XII>{xml_escape(line.vat_exemption_code)}</P_12_XII>\n" if line.vat_exemption_code else "")
-            + f"  </FaWiersz>\n"
+            + (
+                f"    <P_12_XII>{xml_escape(line.vat_exemption_code)}</P_12_XII>\n"
+                if line.vat_exemption_code else ""
+            )
+            + "  </FaWiersz>\n"
         )
     return "<FaWiersze>\n" + "".join(rows) + "</FaWiersze>\n"
 
@@ -192,9 +202,12 @@ class FA2Generator(BaseDocumentGenerator):
                 f"      <P_23>2</P_23>\n"
                 f"    </Adnotacje>\n"
                 f"    {_invoice_lines(invoice).strip()}\n"
-                + (f"    <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>\n" if invoice.note else "")
-                + f"  </Fa>\n"
-                f"</Faktura>\n"
+                + (
+                    f"    <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>\n"
+                    if invoice.note else ""
+                )
+                + "  </Fa>\n"
+                "</Faktura>\n"
             )
             return xml
         except Exception as exc:
@@ -239,9 +252,10 @@ def _fa3_seller_block(seller: InvoiceParty) -> str:
     id_lines = []
     if nip:
         id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
-    if seller.alt_tax_id:
-        id_lines.append(f"<KodUE>{xml_escape(seller.tax_id.country_code.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(seller.alt_tax_id.identifier)}</NrVatUE>")
+    eu_vat = next((t for t in seller.alt_tax_ids if t.country_code.upper() != "PL"), None)
+    if eu_vat:
+        id_lines.append(f"<KodUE>{xml_escape(eu_vat.country_code.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{xml_escape(eu_vat.identifier)}</NrVatUE>")
     id_lines.append(f"<Nazwa>{xml_escape(name)}</Nazwa>")
 
     adres = _adres_block(seller)
@@ -268,11 +282,12 @@ def _fa3_buyer_block(buyer: InvoiceParty) -> str:
     nip = buyer.tax_id.identifier if buyer.tax_id.country_code.upper() == "PL" else ""
 
     id_lines: list[str] = []
+    eu_vat_buyer = next((t for t in buyer.alt_tax_ids if t.country_code.upper() != "PL"), None)
     if nip:
         id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
-    elif buyer.alt_tax_id:
-        id_lines.append(f"<KodUE>{xml_escape(buyer.tax_id.country_code.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(buyer.alt_tax_id.identifier)}</NrVatUE>")
+    elif eu_vat_buyer:
+        id_lines.append(f"<KodUE>{xml_escape(eu_vat_buyer.country_code.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{xml_escape(eu_vat_buyer.identifier)}</NrVatUE>")
     else:
         id_lines.append("<BrakID>1</BrakID>")
     id_lines.append(f"<Nazwa>{xml_escape(name)}</Nazwa>")

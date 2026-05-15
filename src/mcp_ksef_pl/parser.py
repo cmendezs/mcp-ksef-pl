@@ -11,8 +11,8 @@ from mcp_einvoicing_core import (
     InvoiceParty,
     PartyAddress,
     TaxIdentifier,
-    VATSummary,
     ValidationError,
+    VATSummary,
 )
 
 _FA2_NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
@@ -25,7 +25,8 @@ def _load_etree() -> Any:
 
         return etree
     except ImportError:
-        raise ValidationError("lxml is required for FA(2) XML parsing. Install it with: pip install lxml")
+        msg = "lxml is required for FA(2) XML parsing. Install it with: pip install lxml"
+        raise ValidationError(msg)
 
 
 def _text(element: Any, xpath: str, ns: dict[str, str]) -> str:
@@ -57,8 +58,9 @@ class FA2Parser(BaseDocumentParser):
         root = etree.fromstring(document.encode())
         ns = _NS_MAP
 
+        schema_version = root.findtext(f"{{{_FA2_NS}}}Naglowek/{{{_FA2_NS}}}KodFormularza") or ""
         header = {
-            "schema_version": root.findtext(f"{{{_FA2_NS}}}Naglowek/{{{_FA2_NS}}}KodFormularza") or "",
+            "schema_version": schema_version,
             "created_at": _text(root, "fa:Naglowek/fa:DataWytworzenieFa", ns),
             "system_info": _text(root, "fa:Naglowek/fa:SystemInfo", ns),
         }

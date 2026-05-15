@@ -1,5 +1,4 @@
 import re
-from decimal import Decimal
 
 from mcp_einvoicing_core import (
     BasePartyValidator,
@@ -62,7 +61,8 @@ class PolishPartyValidator(BasePartyValidator):
         if party.tax_id.country_code.upper() == "PL":
             if not await self.validate_tax_id(party.tax_id):
                 errors.append(
-                    f"{role.capitalize()} NIP '{party.tax_id.identifier}' failed checksum validation."
+                    f"{role.capitalize()} NIP '{party.tax_id.identifier}'"
+                    " failed checksum validation."
                 )
         else:
             warnings.append(
