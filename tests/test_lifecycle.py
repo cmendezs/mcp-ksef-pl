@@ -139,7 +139,9 @@ class TestSubmitDocument:
         ):
             result = await manager.submit_document(sample_fa3_xml, {})
 
-        assert result == "SESSION-REF-001:INVOICE-REF-001"
+        assert result.session_ref == "SESSION-REF-001"
+        assert result.invoice_ref == "INVOICE-REF-001"
+        assert result.compound_id == "SESSION-REF-001:INVOICE-REF-001"
 
     @pytest.mark.asyncio
     async def test_submit_without_token_raises(self) -> None:
@@ -189,7 +191,9 @@ class TestSubmitDocument:
             result = await manager.submit_document(sample_fa3_xml, {})
 
         # Session close failed but we still get the compound reference.
-        assert result == "SESSION-001:INV-001"
+        assert result.session_ref == "SESSION-001"
+        assert result.invoice_ref == "INV-001"
+        assert result.compound_id == "SESSION-001:INV-001"
 
 
 # ---------------------------------------------------------------------------

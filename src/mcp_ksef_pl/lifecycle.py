@@ -256,29 +256,34 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         # Step 2: build the per-session envelope (AES key + IV + RSA-wrapped key).
         envelope = InvoiceEnvelope(mf_public_key)
 
-        # Step 3: open the interactive session.
-        session_ref = await self._client.open_online_session(
-            encrypted_symmetric_key=envelope.encrypted_symmetric_key,
-            initialization_vector=envelope.initialization_vector,
-            form_code=form_code,
-        )
-        logger.info("KSeF session opened: %s", session_ref)
-
-        # Step 4: encrypt and send the invoice.
-        send_payload = envelope.build_send_payload(xml)
-        invoice_ref = await self._client.send_invoice_to_session(
-            session_ref, send_payload
-        )
-        logger.info("Invoice sent to session %s: invoiceRef=%s", session_ref, invoice_ref)
-
-        # Step 5: close the session (non-fatal if this fails — invoice is already sent).
         try:
-            await self._client.close_online_session(session_ref)
-            logger.info("KSeF session closed: %s", session_ref)
-        except Exception as exc:
-            logger.warning(
-                "Session close failed (non-fatal, invoice was accepted): %s", exc
+            # Step 3: open the interactive session.
+            session_ref = await self._client.open_online_session(
+                encrypted_symmetric_key=envelope.encrypted_symmetric_key,
+                initialization_vector=envelope.initialization_vector,
+                form_code=form_code,
             )
+            logger.info("KSeF session opened: %s", session_ref)
+
+            # Step 4: encrypt and send the invoice.
+            send_payload = envelope.build_send_payload(xml)
+            invoice_ref = await self._client.send_invoice_to_session(
+                session_ref, send_payload
+            )
+            logger.info("Invoice sent to session %s: invoiceRef=%s", session_ref, invoice_ref)
+
+            # Step 5: close the session (non-fatal if this fails — invoice is already sent).
+            try:
+                await self._client.close_online_session(session_ref)
+                logger.info("KSeF session closed: %s", session_ref)
+            except Exception as exc:
+                logger.warning(
+                    "Session close failed (non-fatal, invoice was accepted): %s", exc
+                )
+        finally:
+            # Drop AES key references regardless of outcome to minimise the
+            # window during which key material is reachable in process memory.
+            envelope.cleanup()
 
         return SubmitResult(
             invoice_ref=invoice_ref,
