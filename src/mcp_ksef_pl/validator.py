@@ -14,6 +14,7 @@ from mcp_einvoicing_core import (
     DocumentValidationResult,
     XSDValidationError,
 )
+from mcp_einvoicing_core.xml_utils import safe_fromstring, safe_parser
 
 _FA2_NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _SCHEMA_VERSION = "FA(2) v1-0E"
@@ -51,9 +52,9 @@ class FA2Validator(BaseDocumentValidator):
 
         if has_lxml and schema_path and etree is not None:
             try:
-                xsd_doc = etree.parse(schema_path)
+                xsd_doc = etree.parse(schema_path, safe_parser())
                 schema = etree.XMLSchema(xsd_doc)
-                doc = etree.fromstring(xml_content.encode())
+                doc = safe_fromstring(xml_content.encode())
                 if not schema.validate(doc):
                     xsd_errors = [str(e) for e in schema.error_log]
                     raise XSDValidationError(

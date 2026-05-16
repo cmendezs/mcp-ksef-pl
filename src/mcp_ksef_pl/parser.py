@@ -14,6 +14,7 @@ from mcp_einvoicing_core import (
     ValidationError,
     VATSummary,
 )
+from mcp_einvoicing_core.xml_utils import safe_fromstring
 
 _FA2_NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS_MAP = {"fa": _FA2_NS}
@@ -54,8 +55,7 @@ class FA2Parser(BaseDocumentParser):
     """Parses KSeF FA(2) XML documents."""
 
     async def parse(self, document: str) -> dict[str, Any]:
-        etree = _load_etree()
-        root = etree.fromstring(document.encode())
+        root = safe_fromstring(document.encode())
         ns = _NS_MAP
 
         schema_version = root.findtext(f"{{{_FA2_NS}}}Naglowek/{{{_FA2_NS}}}KodFormularza") or ""

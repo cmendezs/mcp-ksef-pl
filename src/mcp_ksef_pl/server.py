@@ -13,6 +13,8 @@ from mcp_einvoicing_core import (
     DocumentValidationResult,
     InvoiceDocument,
 )
+from mcp_einvoicing_core.base_server import assert_not_read_only
+from mcp_einvoicing_core.confirmation import ConfirmationGate
 from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 
 from .config import KSeFSettings
@@ -103,6 +105,7 @@ async def parse_fa2_invoice(xml_content: str) -> dict[str, Any]:
 async def submit_invoice_to_ksef(
     xml_content: str,
     session_token: str = "",
+    confirmation_token: str = "",
 ) -> dict[str, Any]:
     """Submit a FA(3) XML invoice to the KSeF platform (API v2).
 
@@ -110,12 +113,17 @@ async def submit_invoice_to_ksef(
     only for validation or parsing; it produces FA(2) XML which KSeF v2 does not
     accept.  FA(3) generation is tracked in roadmap-2026.md.
 
+    HUMAN-IN-THE-LOOP: Call without confirmation_token first to receive a
+    confirmation summary and token.  Show the summary to the user, then call
+    again with confirmation_token set to execute the actual submission.
+
     Parameters
     ----------
-    xml_content:   FA(3) invoice XML string to submit.
-    session_token: KSeF v2 AccessToken (overrides KSEF_SESSION_TOKEN env var).
-                   Obtain via the challenge → authenticate → redeem flow:
-                   https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
+    xml_content:         FA(3) invoice XML string to submit.
+    session_token:       KSeF v2 AccessToken (overrides KSEF_SESSION_TOKEN env var).
+                         Obtain via the challenge → authenticate → redeem flow:
+                         https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
+    confirmation_token:  Token from the previous awaiting_confirmation response.
 
     Returns a dict with:
       session_reference  — KSeF session reference number
@@ -123,19 +131,33 @@ async def submit_invoice_to_ksef(
       reference_number   — "{sessionRef}:{invoiceRef}" for get_ksef_invoice_status
       status             — "submitted"
     """
+    assert_not_read_only("KSEF_READ_ONLY")
+    gate = ConfirmationGate.get_default()
+    token: str | None = confirmation_token or None
+    if not gate.is_confirmed(token):
+        size_kb = round(len(xml_content.encode()) / 1024, 1)
+        return gate.pending_response(
+            action="submit_invoice_to_ksef",
+            summary=(
+                f"Submit a {size_kb} KB FA(3) XML invoice to KSeF (API v2). "
+                "This action is irreversible once accepted by the Ministry of Finance platform."
+            ),
+            token=token,
+        )
+
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)
     metadata: dict[str, Any] = {}
     if session_token:
         metadata["session_token"] = session_token
 
-    compound_ref = await manager.submit_document(xml_content, metadata)
-    session_ref, invoice_ref = compound_ref.split(":", 1)
+    submit_result = await manager.submit_document(xml_content, metadata)
+    gate.consume(token)
     return {
-        "session_reference": session_ref,
-        "invoice_reference": invoice_ref,
-        "reference_number": compound_ref,
-        "status": "submitted",
+        "session_reference": submit_result.session_ref,
+        "invoice_reference": submit_result.invoice_ref,
+        "reference_number": submit_result.compound_id,
+        "status": submit_result.status,
     }
 
 

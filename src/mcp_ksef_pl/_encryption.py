@@ -63,6 +63,19 @@ class InvoiceEnvelope:
     Create one instance per online session.  The same AES key and IV are used
     for every invoice sent within that session.
 
+    **Per-spec IV design:** The KSeF v2 protocol (sesja-interaktywna.md) transmits
+    the AES key and IV once when opening the session via the ``encryption`` block.
+    All invoices in the session are then encrypted with the same key and IV.
+    Using a session-static IV is therefore correct per the KSeF v2 specification.
+
+    **Residual risk (SoA note):** With a fixed IV in CBC mode, an adversary who
+    observes multiple ciphertexts from the same session can detect identical
+    plaintext prefix blocks (e.g. shared XML preambles).  Because each session
+    uses a freshly generated key and IV (``os.urandom``), the risk is bounded to
+    a single session's worth of invoices and requires a network-level observer.
+    Mitigation requires a spec change by CIRFMF (per-message IV) and is tracked
+    in the SoA as a residual risk until that change is published.
+
     Usage:
         envelope = InvoiceEnvelope(mf_public_key)
         # Pass these when opening the session:
@@ -101,6 +114,17 @@ class InvoiceEnvelope:
     def initialization_vector(self) -> str:
         """Base64-encoded 16-byte AES-CBC IV."""
         return self._initialization_vector
+
+    def cleanup(self) -> None:
+        """Drop references to the AES key and IV to reduce the in-memory window.
+
+        Call from a ``try/finally`` block after the KSeF session closes.  Python
+        cannot truly zero bytes objects, but dropping the reference allows the GC
+        to reclaim the memory sooner and prevents accidental reuse of the key in
+        a subsequent session.
+        """
+        self._aes_key = b""
+        self._iv = b""
 
     def build_send_payload(self, xml_content: str) -> dict[str, object]:
         """Encrypt *xml_content* and return the SendInvoiceRequest body dict.
