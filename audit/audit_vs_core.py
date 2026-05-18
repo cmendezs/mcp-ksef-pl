@@ -142,7 +142,9 @@ _PYPROJECT = Path(__file__).parent.parent / "pyproject.toml"
 
 _REQUIRED_TOOL_CATEGORIES: dict[str, str] = {
     "generate_fa2_invoice":    "Generate KSeF FA(2) XML from invoice data",
+    "generate_fa3_invoice":    "Generate KSeF FA(3) XML from invoice data (mandatory for v2)",
     "validate_fa2_invoice":    "XSD + business-rule validation of FA(2)",
+    "validate_fa3_invoice":    "XSD + business-rule validation of FA(3) — PL-6.2",
     "parse_fa2_invoice":       "Parse FA(2) XML to structured dict",
     "submit_invoice_to_ksef":  "Submit to KSeF platform, return reference number",
     "get_ksef_invoice_status": "Poll processing status by reference number",
