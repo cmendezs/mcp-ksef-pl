@@ -43,7 +43,7 @@ class TestFA2Validator:
             "<Naglowek>"
             '<KodFormularza kodSystemowy="FA (2)">FA</KodFormularza>'
             "<WariantFormularza>2</WariantFormularza>"
-            "<DataWytworzenieFa>2024-01-01T00:00:00Z</DataWytworzenieFa>"
+            "<DataWytworzeniaFa>2024-01-01T00:00:00Z</DataWytworzeniaFa>"
             "</Naglowek>"
             "<Podmiot2><DaneIdentyfikacyjne><NIP>5260250274</NIP></DaneIdentyfikacyjne></Podmiot2>"
             "<Fa><KodWaluty>PLN</KodWaluty><P_1>2024-01-01</P_1><P_2>001</P_2>"
@@ -63,7 +63,7 @@ class TestFA2Validator:
             "<Naglowek>"
             '<KodFormularza kodSystemowy="FA (2)">FA</KodFormularza>'
             "<WariantFormularza>2</WariantFormularza>"
-            "<DataWytworzenieFa>2024-01-01T00:00:00Z</DataWytworzenieFa>"
+            "<DataWytworzeniaFa>2024-01-01T00:00:00Z</DataWytworzeniaFa>"
             "</Naglowek>"
             "<Podmiot1><DaneIdentyfikacyjne><NIP>5261040828</NIP></DaneIdentyfikacyjne></Podmiot1>"
             "<Podmiot2><DaneIdentyfikacyjne><NIP>5260250274</NIP></DaneIdentyfikacyjne></Podmiot2>"

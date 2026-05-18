@@ -19,30 +19,36 @@ def test_settings() -> KSeFSettings:
 
 @pytest.fixture
 def sample_fa3_xml() -> str:
-    # Minimal FA(3) XML — structure mirrors FA(2) but with updated header codes.
-    # [NEED] Replace with a full FA(3) XML once the FA(3) generator is implemented.
+    # Minimal FA(3) XML — uses the correct FA(3) namespace and header structure.
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<Faktura xmlns="http://crd.gov.pl/wzor/2025/09/11/12648/">'
+        '<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/">'
         "<Naglowek>"
         '<KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>'
         "<WariantFormularza>3</WariantFormularza>"
-        "<DataWytworzenieFa>2026-03-15T12:00:00Z</DataWytworzenieFa>"
+        "<DataWytworzeniaFa>2026-03-15T12:00:00Z</DataWytworzeniaFa>"
         "<SystemInfo>mcp-ksef-pl/0.1.0</SystemInfo>"
         "</Naglowek>"
         "<Podmiot1><DaneIdentyfikacyjne><NIP>5261040828</NIP>"
         "<Nazwa>Ministerstwo Finansów</Nazwa></DaneIdentyfikacyjne></Podmiot1>"
         "<Podmiot2><DaneIdentyfikacyjne><NIP>5260250274</NIP>"
-        "<Nazwa>Nabywca</Nazwa></DaneIdentyfikacyjne></Podmiot2>"
+        "<Nazwa>Nabywca</Nazwa></DaneIdentyfikacyjne>"
+        "<JST>2</JST><GV>2</GV></Podmiot2>"
         "<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-03-15</P_1>"
         "<P_2>FV/2026/001</P_2><P_13_1>2000.00</P_13_1>"
         "<P_14_1>460.00</P_14_1><P_15>2460.00</P_15>"
         "<Adnotacje><P_16>2</P_16><P_17>2</P_17><P_18>2</P_18>"
-        "<P_18A>2</P_18A><P_23>2</P_23></Adnotacje>"
-        "<FaWiersze><FaWiersz><NrWierszaFa>1</NrWierszaFa>"
+        "<P_18A>2</P_18A>"
+        "<Zwolnienie><P_19N>1</P_19N></Zwolnienie>"
+        "<NoweSrodkiTransportu><P_22N>1</P_22N></NoweSrodkiTransportu>"
+        "<P_23>2</P_23>"
+        "<PMarzy><P_PMarzyN>1</P_PMarzyN></PMarzy>"
+        "</Adnotacje>"
+        "<RodzajFaktury>VAT</RodzajFaktury>"
+        "<FaWiersz><NrWierszaFa>1</NrWierszaFa>"
         "<P_7>Usługi</P_7><P_8A>szt</P_8A><P_8B>10.0000</P_8B>"
         "<P_9A>200.00</P_9A><P_11>2000.00</P_11><P_12>23</P_12>"
-        "</FaWiersz></FaWiersze></Fa>"
+        "</FaWiersz></Fa>"
         "</Faktura>"
     )
 

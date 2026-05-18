@@ -20,10 +20,11 @@ from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 from .config import KSeFSettings
 from .generator import FA2Generator, FA3Generator
 from .lifecycle import KSeFLifecycleManager
+from .models import KSeFFA3Options
 from .parser import FA2Parser
 from .party_validator import PolishPartyValidator, validate_nip, validate_regon
 from .peppol import PeppolUBLGenerator
-from .validator import FA2Validator
+from .validator import FA2Validator, FA3Validator
 
 setup_logging()
 logger = get_logger(__name__)
@@ -32,15 +33,21 @@ mcp = FastMCP(
     name="mcp-ksef-pl",
     instructions=(
         "MCP server for Polish electronic invoicing.\n"
-        "Supports KSeF FA(2) (national format) and Peppol BIS 3.0 / EN 16931 UBL.\n"
-        "Use generate_fa2_invoice → validate_fa2_invoice → submit_invoice_to_ksef for the "
-        "standard KSeF workflow. Use generate_peppol_invoice for cross-border Peppol invoicing."
+        "Supports KSeF FA(2) (legacy, read-only), FA(3) (mandatory for KSeF API v2 submissions), "
+        "and Peppol BIS 3.0 / EN 16931 UBL.\n"
+        "Standard KSeF workflow: generate_fa3_invoice"
+        " → validate_fa3_invoice → submit_invoice_to_ksef.\n"
+        "Use generate_fa2_invoice and validate_fa2_invoice only for legacy document handling.\n"
+        "Use generate_peppol_invoice for cross-border Peppol invoicing.\n"
+        "Note: only interactive online sessions (/sessions/online) are supported; "
+        "batch submission (/api/batch/) is not yet implemented."
     ),
 )
 
 _fa2_generator = FA2Generator()
 _fa3_generator = FA3Generator()
 _fa2_validator = FA2Validator()
+_fa3_validator = FA3Validator()
 _fa2_parser = FA2Parser()
 _peppol_generator = PeppolUBLGenerator()
 _party_validator = PolishPartyValidator()
@@ -62,7 +69,10 @@ async def generate_fa2_invoice(invoice: InvoiceDocument) -> str:
 
 
 @mcp.tool
-async def generate_fa3_invoice(invoice: InvoiceDocument) -> str:
+async def generate_fa3_invoice(
+    invoice: InvoiceDocument,
+    options: KSeFFA3Options | None = None,
+) -> str:
     """Generate a KSeF-compliant FA(3) XML invoice from structured invoice data.
 
     FA(3) is required for all new invoice submissions via KSeF API v2.
@@ -72,9 +82,16 @@ async def generate_fa3_invoice(invoice: InvoiceDocument) -> str:
     The buyer's tax_id may be a Polish NIP, a EU VAT number (set alt_tax_id),
     or absent (leave tax_id.identifier empty to emit <BrakID>).
 
+    Use the optional `options` parameter to supply:
+      - IPKSeF / LinkDoPlatnosci payment identifiers (PL-2.2)
+      - Correction invoice reference (rodzaj_faktury=KOR + correction block) (PL-4.1)
+      - Supporting document attachments (<Zalacznik>) (PL-2.3)
+      - Additional buyer entities (<Podmiot3>) (PL-2.4)
+      - Authorised representative (<PodmiotUpowazniony>) (PL-2.4)
+
     Returns the FA(3) XML string ready for submit_invoice_to_ksef.
     """
-    return await _fa3_generator.generate(invoice)
+    return await _fa3_generator.generate(invoice, options=options)
 
 
 @mcp.tool
@@ -85,6 +102,21 @@ async def validate_fa2_invoice(xml_content: str) -> DocumentValidationResult:
     business-rule checks.  Returns a DocumentValidationResult with errors and warnings.
     """
     return await _fa2_validator.validate(xml_content)
+
+
+@mcp.tool
+async def validate_fa3_invoice(xml_content: str) -> DocumentValidationResult:
+    """Validate a KSeF FA(3) XML invoice before submission to KSeF API v2 (PL-6.2).
+
+    Runs XSD validation against specs/schemat_FA(3)_v1-0E.xsd (requires lxml)
+    and FA(3)-specific business-rule checks including namespace, mandatory
+    Adnotacje sub-elements, JST/GV flags, and the absence of the FA(2)
+    <FaWiersze> wrapper.
+
+    Call this after generate_fa3_invoice and before submit_invoice_to_ksef.
+    Returns a DocumentValidationResult with errors and warnings.
+    """
+    return await _fa3_validator.validate(xml_content)
 
 
 @mcp.tool
@@ -105,13 +137,13 @@ async def parse_fa2_invoice(xml_content: str) -> dict[str, Any]:
 async def submit_invoice_to_ksef(
     xml_content: str,
     session_token: str = "",
+    session_token_expires_at: str = "",
     confirmation_token: str = "",
 ) -> dict[str, Any]:
     """Submit a FA(3) XML invoice to the KSeF platform (API v2).
 
-    KSeF API v2 requires FA(3) format for submission.  Use generate_fa2_invoice
-    only for validation or parsing; it produces FA(2) XML which KSeF v2 does not
-    accept.  FA(3) generation is tracked in roadmap-2026.md.
+    KSeF API v2 requires FA(3) format for submission.  Use generate_fa3_invoice
+    to produce FA(3) XML before calling this tool.
 
     HUMAN-IN-THE-LOOP: Call without confirmation_token first to receive a
     confirmation summary and token.  Show the summary to the user, then call
@@ -119,11 +151,14 @@ async def submit_invoice_to_ksef(
 
     Parameters
     ----------
-    xml_content:         FA(3) invoice XML string to submit.
-    session_token:       KSeF v2 AccessToken (overrides KSEF_SESSION_TOKEN env var).
-                         Obtain via the challenge → authenticate → redeem flow:
-                         https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
-    confirmation_token:  Token from the previous awaiting_confirmation response.
+    xml_content:              FA(3) invoice XML string to submit.
+    session_token:            KSeF v2 AccessToken (overrides KSEF_SESSION_TOKEN env var).
+                              Obtain via the challenge → authenticate → redeem flow:
+                              https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
+    session_token_expires_at: ISO-8601 datetime when the token expires.
+                              A warning is logged if fewer than 60 seconds remain;
+                              submission is blocked if the token is already expired.
+    confirmation_token:       Token from the previous awaiting_confirmation response.
 
     Returns a dict with:
       session_reference  — KSeF session reference number
@@ -132,6 +167,14 @@ async def submit_invoice_to_ksef(
       status             — "submitted"
     """
     assert_not_read_only("KSEF_READ_ONLY")
+    _FA3_NS = "http://crd.gov.pl/wzor/2025/06/25/13775/"
+    if _FA3_NS not in xml_content:
+        from mcp_einvoicing_core import DocumentGenerationError
+        raise DocumentGenerationError(
+            "xml_content does not appear to be FA(3) XML (namespace not found). "
+            "Use generate_fa3_invoice — not generate_fa2_invoice — before calling "
+            "submit_invoice_to_ksef."
+        )
     gate = ConfirmationGate.get_default()
     token: str | None = confirmation_token or None
     if not gate.is_confirmed(token):
@@ -150,6 +193,8 @@ async def submit_invoice_to_ksef(
     metadata: dict[str, Any] = {}
     if session_token:
         metadata["session_token"] = session_token
+    if session_token_expires_at:
+        metadata["session_token_expires_at"] = session_token_expires_at
 
     submit_result = await manager.submit_document(xml_content, metadata)
     gate.consume(token)

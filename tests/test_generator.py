@@ -34,7 +34,7 @@ class TestFA2Generator:
         assert "<KodFormularza" in xml
         assert "FA (2)" in xml
         assert "<WariantFormularza>2</WariantFormularza>" in xml
-        assert "<DataWytworzenieFa>" in xml
+        assert "<DataWytworzeniaFa>" in xml
 
     @pytest.mark.asyncio
     async def test_generate_seller_nip(

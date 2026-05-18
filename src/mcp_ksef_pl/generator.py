@@ -35,6 +35,14 @@ from mcp_einvoicing_core import (
 )
 from mcp_einvoicing_core.xml_utils import xml_escape
 
+from .models import (
+    KSeFAttachment,
+    KSeFCorrectionRef,
+    KSeFFA3Options,
+    KSeFPodmiot3,
+    KSeFPodmiotUpowazniony,
+)
+
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
 _SYSTEM_INFO = "mcp-ksef-pl/0.1.0"
@@ -107,8 +115,14 @@ def _vat_summary_fields(summaries: list[VATSummary]) -> str:
                 fields[f"P_14_{idx}"] = _d(s.vat_amount)
             total_gross += s.taxable_base + s.vat_amount
         elif s.vat_exemption_code:
-            # Exempt
-            fields["P_13_5"] = _d(s.taxable_base)
+            code = s.vat_exemption_code.upper()
+            if code == "OO":
+                fields["P_13_6_1"] = _d(s.taxable_base)
+            elif code == "NP":
+                fields["P_13_7"] = _d(s.taxable_base)
+            else:
+                # ZW (zwolnienie) and any unrecognised code → P_13_5 (exempt)
+                fields["P_13_5"] = _d(s.taxable_base)
             total_gross += s.taxable_base
         else:
             # Unknown rate — put in field index 1 (23%) as a fallback
@@ -183,7 +197,7 @@ class FA2Generator(BaseDocumentGenerator):
                 f"  <Naglowek>\n"
                 f'    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>\n'
                 f"    <WariantFormularza>2</WariantFormularza>\n"
-                f"    <DataWytworzenieFa>{now_utc}</DataWytworzenieFa>\n"
+                f"    <DataWytworzeniaFa>{now_utc}</DataWytworzeniaFa>\n"
                 f"    <SystemInfo>{xml_escape(_SYSTEM_INFO)}</SystemInfo>\n"
                 f"  </Naglowek>\n"
                 f"  {_party_block(invoice.seller, 'Podmiot1').strip()}\n"
@@ -240,6 +254,9 @@ def _adres_block(party: InvoiceParty) -> str:
     if a.province:
         # AdresL2 is optional — use for province/region when present
         lines.append(f"  <AdresL2>{xml_escape(a.province)}</AdresL2>")
+    gln = a.gln if a else None
+    if gln:
+        lines.append(f"  <GLN>{xml_escape(str(gln))}</GLN>")
     lines.append("</Adres>")
     return "\n".join(lines)
 
@@ -327,7 +344,14 @@ def _fa3_vat_fields(summaries: list[VATSummary]) -> tuple[str, str]:
                 band_lines.append(f"<P_14_{idx}>{_d(s.vat_amount)}</P_14_{idx}>")
             total_gross += s.taxable_base + s.vat_amount
         elif s.vat_exemption_code:
-            band_lines.append(f"<P_13_5>{_d(s.taxable_base)}</P_13_5>")
+            code = s.vat_exemption_code.upper()
+            if code == "OO":
+                band_lines.append(f"<P_13_6_1>{_d(s.taxable_base)}</P_13_6_1>")
+            elif code == "NP":
+                band_lines.append(f"<P_13_7>{_d(s.taxable_base)}</P_13_7>")
+            else:
+                # ZW (zwolnienie) and any unrecognised code → P_13_5 (exempt)
+                band_lines.append(f"<P_13_5>{_d(s.taxable_base)}</P_13_5>")
             total_gross += s.taxable_base
         else:
             band_lines.append(f"<P_13_1>{_d(s.taxable_base)}</P_13_1>")
@@ -396,36 +420,96 @@ def _fa3_wiersz_lines(invoice: InvoiceDocument) -> str:
     return "\n".join(rows)
 
 
-def _fa3_platnosc_block(invoice: InvoiceDocument) -> str:
-    """Build an optional <Platnosc> block when IBAN or due_date is present.
+def _fa3_podmiot3_block(entries: list[KSeFPodmiot3]) -> str:
+    """Build one <Podmiot3> block per additional party entry."""
+    parts: list[str] = []
+    for p3 in entries:
+        lines = ["<Podmiot3>", "  <DaneIdentyfikacyjne>"]
+        if p3.nip:
+            lines.append(f"    <NIP>{xml_escape(p3.nip)}</NIP>")
+        lines.append(f"    <Nazwa>{xml_escape(p3.name)}</Nazwa>")
+        lines.append("  </DaneIdentyfikacyjne>")
+        lines.append(f"  <Rola>{xml_escape(p3.role_code)}</Rola>")
+        if p3.role_description:
+            lines.append(f"  <OpisRoli>{xml_escape(p3.role_description)}</OpisRoli>")
+        lines.append("</Podmiot3>")
+        parts.append("\n".join(lines))
+    return "\n".join(parts)
 
-    Implements the minimum viable payment section:
-      - RachunekBankowy with IBAN (when provided)
-      - TerminPlatnosci with due date and FormaPlatnosci=6 (wire transfer)
 
-    FormaPlatnosci=6 (przelew bankowy) is the standard default for B2B
-    invoices; override by passing full XML if another payment form is needed.
+def _fa3_podmiot_upowazniony_block(pu: KSeFPodmiotUpowazniony) -> str:
+    """Build the <PodmiotUpowazniony> block."""
+    return (
+        "<PodmiotUpowazniony>\n"
+        "  <DaneIdentyfikacyjne>\n"
+        f"    <NIP>{xml_escape(pu.nip)}</NIP>\n"
+        f"    <Nazwa>{xml_escape(pu.name)}</Nazwa>\n"
+        "  </DaneIdentyfikacyjne>\n"
+        "</PodmiotUpowazniony>"
+    )
+
+
+def _fa3_zalacznik_blocks(attachments: list[KSeFAttachment]) -> str:
+    """Build <Zalacznik> blocks for supporting document attachments."""
+    parts: list[str] = []
+    for att in attachments:
+        parts.append(
+            "<Zalacznik>\n"
+            f"  <Plik>{xml_escape(att.filename)}</Plik>\n"
+            f"  <Mime>{xml_escape(att.mime_type)}</Mime>\n"
+            f"  <Zawartosc>{att.content_base64}</Zawartosc>\n"
+            "</Zalacznik>"
+        )
+    return "\n".join(parts)
+
+
+def _fa3_correction_block(ref: KSeFCorrectionRef) -> str:
+    """Build the correction reference block (NrKSeF / NrKSeFN / NrKSeFZN)."""
+    lines: list[str] = ["<FakturaKorygowana>"]
+    if ref.numer_ksef:
+        lines.append(f"  <NrKSeF>{xml_escape(ref.numer_ksef)}</NrKSeF>")
+    if ref.numer_ksefn:
+        lines.append(f"  <NrKSeFN>{xml_escape(ref.numer_ksefn)}</NrKSeFN>")
+    if ref.numer_ksefzn:
+        lines.append(f"  <NrKSeFZN>{xml_escape(ref.numer_ksefzn)}</NrKSeFZN>")
+    lines.append("</FakturaKorygowana>")
+    return "\n".join(lines)
+
+
+def _fa3_platnosc_block(
+    invoice: InvoiceDocument,
+    ipksef: str = "",
+    link_do_platnosci: str = "",
+) -> str:
+    """Build an optional <Platnosc> block when IBAN, due_date, or KSeF payment IDs are present.
+
+    FormaPlatnosci=6 (przelew bankowy) is the standard default for B2B invoices.
+    ipksef and link_do_platnosci are the KSeF-specific payment identifiers (PL-2.2).
     """
-    if not invoice.payment:
-        return ""
-    p = invoice.payment
-    if not p.iban and not p.due_date:
+    p = invoice.payment if invoice.payment else None
+    has_iban = p and p.iban
+    has_due_date = p and p.due_date
+    if not has_iban and not has_due_date and not ipksef and not link_do_platnosci:
         return ""
 
     parts = ["<Platnosc>"]
-    if p.due_date:
+    if has_due_date:
         parts.append(
             f"  <TerminPlatnosci>\n"
             f"    <Termin>{xml_escape(str(p.due_date))}</Termin>\n"
             f"    <FormaPlatnosci>6</FormaPlatnosci>\n"
             f"  </TerminPlatnosci>"
         )
-    if p.iban:
+    if has_iban:
         parts.append(
             f"  <RachunekBankowy>\n"
             f"    <NrRB>{xml_escape(p.iban)}</NrRB>\n"
             f"  </RachunekBankowy>"
         )
+    if ipksef:
+        parts.append(f"  <IPKSeF>{xml_escape(ipksef)}</IPKSeF>")
+    if link_do_platnosci:
+        parts.append(f"  <LinkDoPlatnosci>{xml_escape(link_do_platnosci)}</LinkDoPlatnosci>")
     parts.append("</Platnosc>")
     return "\n".join(parts)
 
@@ -454,24 +538,48 @@ class FA3Generator(BaseDocumentGenerator):
     def get_namespace(self) -> str:
         return _NS3
 
-    async def generate(self, invoice: InvoiceDocument) -> str:  # noqa: C901
+    async def generate(  # noqa: C901
+        self,
+        invoice: InvoiceDocument,
+        *,
+        options: KSeFFA3Options | None = None,
+    ) -> str:
         """Generate a KSeF-compliant FA(3) XML invoice.
-
-        Produces a standard VAT invoice (RodzajFaktury=VAT).  Correction,
-        advance, and settlement invoice types are not yet supported.
 
         Args:
             invoice: Structured invoice data.  seller.tax_id must be a Polish
-                     NIP (10 digits).  buyer.tax_id may be a Polish NIP, a
-                     EU VAT number, or absent (BrakID).
+                     NIP (10 digits).  buyer.tax_id may be a Polish NIP, an EU
+                     VAT number, or absent (BrakID).
+            options: Optional FA(3) extensions — correction reference, payment
+                     identifiers, attachments, additional parties (PL-2.2/2.3/2.4/4.1).
 
         Returns:
             UTF-8 FA(3) XML string ready to be passed to submit_invoice_to_ksef.
         """
+        opts = options or KSeFFA3Options()
+
+        # PL-4.1: 50,000-line limit for collective correction invoices.
+        if len(invoice.lines) > 50_000:
+            raise DocumentGenerationError(
+                f"Invoice has {len(invoice.lines)} lines; KSeF imposes a 50,000-line limit."
+            )
+
+        # PL-4.1: Correction invoices require a KSeF reference.
+        rodzaj = opts.rodzaj_faktury.upper()
+        if rodzaj in ("KOR", "KOR_ZAL", "KOR_ROZ") and not opts.correction:
+            raise DocumentGenerationError(
+                f"rodzaj_faktury={rodzaj} requires a correction reference "
+                "(opts.correction must be set with the original invoice's numer_ksef)."
+            )
+
         try:
             now_utc = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             vat_xml, p15_xml = _fa3_vat_fields(invoice.vat_summary or [])
-            platnosc = _fa3_platnosc_block(invoice)
+            platnosc = _fa3_platnosc_block(
+                invoice,
+                ipksef=opts.ipksef,
+                link_do_platnosci=opts.link_do_platnosci,
+            )
 
             parts: list[str] = [
                 '<?xml version="1.0" encoding="UTF-8"?>',
@@ -487,6 +595,17 @@ class FA3Generator(BaseDocumentGenerator):
                 f"  {_fa3_seller_block(invoice.seller).replace(chr(10), chr(10) + '  ').strip()}",
                 # --- Podmiot2 (buyer) ---
                 f"  {_fa3_buyer_block(invoice.buyer).replace(chr(10), chr(10) + '  ').strip()}",
+            ]
+
+            # PL-2.4: Additional parties (Podmiot3, PodmiotUpowazniony)
+            if opts.podmiot3_entries:
+                for bl in _fa3_podmiot3_block(opts.podmiot3_entries).splitlines():
+                    parts.append(f"  {bl}")
+            if opts.podmiot_upowazniony:
+                for bl in _fa3_podmiot_upowazniony_block(opts.podmiot_upowazniony).splitlines():
+                    parts.append(f"  {bl}")
+
+            parts += [
                 # --- Fa ---
                 "  <Fa>",
                 f"    <KodWaluty>{xml_escape(invoice.currency)}</KodWaluty>",
@@ -506,8 +625,13 @@ class FA3Generator(BaseDocumentGenerator):
             for al in _fa3_adnotacje().splitlines():
                 parts.append(f"    {al}")
 
-            # RodzajFaktury (mandatory — VAT for standard invoices)
-            parts.append("    <RodzajFaktury>VAT</RodzajFaktury>")
+            # RodzajFaktury (mandatory)
+            parts.append(f"    <RodzajFaktury>{xml_escape(rodzaj)}</RodzajFaktury>")
+
+            # PL-4.1: Correction reference block
+            if opts.correction:
+                for cl in _fa3_correction_block(opts.correction).splitlines():
+                    parts.append(f"    {cl}")
 
             # Invoice lines (direct FaWiersz children, no wrapper)
             if invoice.lines:
@@ -518,6 +642,11 @@ class FA3Generator(BaseDocumentGenerator):
             if platnosc:
                 for pl in platnosc.splitlines():
                     parts.append(f"    {pl}")
+
+            # PL-2.3: Attachments
+            if opts.attachments:
+                for zl in _fa3_zalacznik_blocks(opts.attachments).splitlines():
+                    parts.append(f"    {zl}")
 
             parts.append("  </Fa>")
 
@@ -534,5 +663,7 @@ class FA3Generator(BaseDocumentGenerator):
             parts.append("</Faktura>")
             return "\n".join(parts) + "\n"
 
+        except DocumentGenerationError:
+            raise
         except Exception as exc:
             raise DocumentGenerationError(f"FA(3) generation failed: {exc}") from exc

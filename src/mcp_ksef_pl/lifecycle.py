@@ -46,7 +46,7 @@ live submissions.  See roadmap-2026.md.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from mcp_einvoicing_core import (
@@ -86,6 +86,16 @@ class KSeFClient(BaseEInvoicingClient):
 
     def update_access_token(self, token: str) -> None:
         self._static_token = token
+
+    async def _request(self, method: str, path: str, **kwargs: Any) -> Any:  # type: ignore[override]
+        """Override _request to parse KSeF-structured error bodies (PL-3.2)."""
+        try:
+            return await super()._request(method, path, **kwargs)
+        except PlatformError as exc:
+            # Re-raise with KSeF-specific error body parsed when available.
+            if hasattr(exc, "response_body") and exc.response_body:
+                _raise_ksef_error(exc.status_code, exc.response_body)
+            raise
 
     # ------------------------------------------------------------------
     # Public-key certificates
@@ -221,8 +231,10 @@ class KSeFLifecycleManager(BaseLifecycleManager):
 
         metadata keys
         -------------
-        session_token   : str, optional  — overrides KSEF_SESSION_TOKEN
-        form_code       : dict, optional — overrides the default FA(3) formCode
+        session_token          : str, optional  — overrides KSEF_SESSION_TOKEN
+        form_code              : dict, optional — overrides the default FA(3) formCode
+        session_token_expires_at: str, optional — ISO-8601 datetime; a warning is logged
+                                  if the token expires within 60 seconds (PL-3.4)
 
         Returns:
             SubmitResult with session_ref and invoice_ref populated.
@@ -241,6 +253,33 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                     "or metadata['session_token']."
                 ),
             )
+
+        # PL-3.4: Pre-flight token expiry check.
+        expires_at_str: str = metadata.get("session_token_expires_at", "")
+        if expires_at_str:
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
+                seconds_left = (expires_at - datetime.now(UTC)).total_seconds()
+                if seconds_left <= 0:
+                    raise PlatformError(
+                        status_code=401,
+                        message=(
+                            f"KSeF AccessToken expired at {expires_at_str}. "
+                            "Obtain a new token before submitting."
+                        ),
+                    )
+                if seconds_left < 60:
+                    logger.warning(
+                        "KSeF AccessToken expires in %.0f seconds — refresh before submission",
+                        seconds_left,
+                    )
+            except PlatformError:
+                raise
+            except ValueError:
+                logger.warning(
+                    "Could not parse session_token_expires_at=%r — skipping expiry check",
+                    expires_at_str,
+                )
 
         form_code: dict[str, str] | None = metadata.get("form_code")
 
@@ -354,24 +393,66 @@ def _pick_encryption_cert(certs: list[dict[str, Any]]) -> str:
 
     KSeF v2 returns multiple certificates with different usages.  Select the
     one whose usage array contains "SymmetricKeyEncryption" and whose validTo
-    date has not yet passed.
+    date has not yet passed (PL-3.1).
 
     Raises:
-        PlatformError: If no suitable certificate is found.
+        PlatformError: If no non-expired suitable certificate is found.
     """
+    now = datetime.now(UTC)
     for cert in certs:
         usages: list[str] = cert.get("usage", [])
-        if "SymmetricKeyEncryption" in usages:
-            certificate = cert.get("certificate", "")
-            if certificate:
-                return certificate
+        if "SymmetricKeyEncryption" not in usages:
+            continue
+        certificate = cert.get("certificate", "")
+        if not certificate:
+            continue
+        valid_to_str = cert.get("validTo", "")
+        if valid_to_str:
+            try:
+                valid_to = datetime.fromisoformat(valid_to_str.replace("Z", "+00:00"))
+                if valid_to <= now:
+                    logger.warning(
+                        "Skipping expired SymmetricKeyEncryption cert (validTo=%s)", valid_to_str
+                    )
+                    continue
+            except ValueError:
+                # Cannot parse validTo — accept and let KSeF reject if invalid
+                pass
+        return certificate
     raise PlatformError(
         status_code=502,
         message=(
-            "No SymmetricKeyEncryption certificate found in KSeF public-key response. "
+            "No valid (non-expired) SymmetricKeyEncryption certificate found in KSeF "
+            "public-key response. "
             f"Returned certificates: {[c.get('usage') for c in certs]}"
         ),
     )
+
+
+def _raise_ksef_error(status_code: int, body: bytes | str) -> None:
+    """Parse a KSeF API error body and raise a typed PlatformError (PL-3.2).
+
+    KSeF v2 returns structured JSON for 400/401/404/409 responses:
+      { "exceptionCode": "AUTH_001", "message": "..." }
+
+    If the body is not JSON or lacks the expected fields, falls back to the
+    raw text to avoid hiding the original error.
+
+    Raises:
+        PlatformError: Always — this function never returns normally.
+    """
+    import json
+
+    text = body.decode("utf-8", errors="replace") if isinstance(body, bytes) else body
+    try:
+        data: dict[str, Any] = json.loads(text)
+        exception_code: str = data.get("exceptionCode", "")
+        message: str = data.get("message", text)
+        detail = f"[{exception_code}] {message}" if exception_code else message
+    except (json.JSONDecodeError, AttributeError):
+        detail = text or f"HTTP {status_code}"
+
+    raise PlatformError(status_code=status_code, message=detail)
 
 
 def _to_iso_datetime(value: str, *, end: bool) -> str:
