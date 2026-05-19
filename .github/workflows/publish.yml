@@ -1,80 +1,143 @@
-name: Publish to PyPI
+name: CI / Publish to PyPI
 
 on:
   push:
+    branches: [main]
     tags:
       - "v*"
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+permissions:
+  contents: write   # write required to create GitHub Releases
+  id-token: write   # required for OIDC trusted publisher (PyPI)
+
 jobs:
-  audit:
-    name: Audit gate
+  # ── 1. Tests ───────────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      - name: Install package and dev dependencies
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package + dev dependencies
+        run: uv sync --all-extras
+
+      - name: Lint with ruff
+        run: uv run ruff check src/mcp_ksef_pl/ tests/ audit/
+
+      - name: Run tests
+        run: uv run pytest --tb=short
+
+  # ── 2. Pre-publish audit ───────────────────────────────────────────────────
+  audit:
+    name: Pre-publish audit vs mcp-einvoicing-core
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install package + dev dependencies
         run: uv sync --all-extras
 
       - name: Run pre-publish audit
-        run: uv run python audit/audit_vs_core.py --fail-on blocking
+        # Exit code 2 = blocking failures → job fails → publish is blocked
+        # Exit code 1 = warnings only     → job passes (informational)
+        run: uv run python audit/audit_vs_core.py --output audit/report.json --fail-on blocking
 
+      - name: Upload audit report
+        if: always()   # Upload even on failure so the report is inspectable
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: audit/report.json
+
+  # ── 3. Build distribution ──────────────────────────────────────────────────
   build:
-    name: Build distribution
+    name: Build distribution packages
     needs: audit
     runs-on: ubuntu-latest
+    # Only build on tag pushes
+    if: startsWith(github.ref, 'refs/tags/v')
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      - name: Build package
+      - name: Build wheel and sdist
         run: uv build --no-sources
 
-      - name: Upload distribution artifacts
+      - name: Upload distribution packages
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-packages
           path: dist/
 
-  publish-pypi:
+  # ── 4. Publish to PyPI ─────────────────────────────────────────────────────
+  publish:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write  # required for OIDC trusted publishing (no API key needed)
+    # Only publish on tag pushes; audit must have passed (via the needs chain)
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcp-ksef-pl
+
     steps:
-      - name: Download distribution artifacts
+      - name: Download distribution packages
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-packages
           path: dist/
 
-      - name: Publish to PyPI
+      - name: Publish to PyPI via trusted publisher (OIDC)
         uses: pypa/gh-action-pypi-publish@release/v1
+        # No API token needed — uses GitHub OIDC trusted publisher.
+        # Configure the trusted publisher at:
+        # https://pypi.org/manage/project/mcp-ksef-pl/settings/publishing/
 
-  create-release:
+  # ── 5. Create GitHub Release ───────────────────────────────────────────────
+  release:
     name: Create GitHub Release
-    needs: build
+    needs: publish
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    if: startsWith(github.ref, 'refs/tags/v')
+
     steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
