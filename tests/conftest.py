@@ -1,73 +1,75 @@
 """Shared fixtures for mcp-ksef-pl tests."""
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
-from mcp_einvoicing_core import (
-    InvoiceDocument,
-    InvoiceLineItem,
-    InvoiceParty,
-    PartyAddress,
-    TaxIdentifier,
-    VATSummary,
-)
+from mcp_einvoicing_core.en16931 import EN16931Address, EN16931LineItem, EN16931Tax
+
+from mcp_ksef_pl.models import KSeFInvoice, KSeFParty
 
 
 @pytest.fixture
-def polish_seller() -> InvoiceParty:
-    return InvoiceParty(
-        tax_id=TaxIdentifier(country_code="PL", identifier="5261040828"),  # MF NIP
+def polish_seller() -> KSeFParty:
+    return KSeFParty(
         name="Ministerstwo Finansów",
-        address=PartyAddress(
-            street="ul. Świętokrzyska 12",
-            postal_code="00-916",
+        nip="5261040828",
+        address=EN16931Address(
+            line_one="ul. Świętokrzyska 12",
             city="Warszawa",
+            postcode="00-916",
             country_code="PL",
         ),
     )
 
 
 @pytest.fixture
-def polish_buyer() -> InvoiceParty:
-    return InvoiceParty(
-        tax_id=TaxIdentifier(country_code="PL", identifier="5260250274"),
+def polish_buyer() -> KSeFParty:
+    return KSeFParty(
         name="Przykładowy Nabywca Sp. z o.o.",
-        address=PartyAddress(
-            street="ul. Marszałkowska 1",
-            postal_code="00-001",
+        nip="5260250274",
+        address=EN16931Address(
+            line_one="ul. Marszałkowska 1",
             city="Warszawa",
+            postcode="00-001",
             country_code="PL",
         ),
     )
 
 
 @pytest.fixture
-def sample_invoice(polish_seller: InvoiceParty, polish_buyer: InvoiceParty) -> InvoiceDocument:
-    return InvoiceDocument(
-        document_type="INVOICE",
-        date="2024-03-15",
-        number="FV/2024/001",
-        currency="PLN",
-        transmission_format="KSeF-FA2",
+def sample_invoice(polish_seller: KSeFParty, polish_buyer: KSeFParty) -> KSeFInvoice:
+    return KSeFInvoice(
+        profile="KSeF",
+        invoice_number="FV/2024/001",
+        invoice_date=date(2024, 3, 15),
+        invoice_type_code="INVOICE",
+        currency_code="PLN",
         seller=polish_seller,
         buyer=polish_buyer,
-        lines=[
-            InvoiceLineItem(
-                line_number=1,
-                description="Usługi konsultingowe",
-                quantity=Decimal("10"),
-                unit_of_measure="godz",
-                unit_price=Decimal("200.00"),
-                total_price=Decimal("2000.00"),
-                vat_rate=Decimal("23"),
-                currency="PLN",
+        sum_of_line_net_amounts=Decimal("2000.00"),
+        tax_exclusive_amount=Decimal("2000.00"),
+        tax_total=Decimal("460.00"),
+        tax_inclusive_amount=Decimal("2460.00"),
+        amount_due=Decimal("2460.00"),
+        tax_lines=[
+            EN16931Tax(
+                category="S",
+                rate=Decimal("23"),
+                taxable_amount=Decimal("2000.00"),
+                tax_amount=Decimal("460.00"),
             ),
         ],
-        vat_summary=[
-            VATSummary(
-                vat_rate=Decimal("23"),
-                taxable_base=Decimal("2000.00"),
-                vat_amount=Decimal("460.00"),
+        line_items=[
+            EN16931LineItem(
+                line_id="1",
+                name="Usługi konsultingowe",
+                quantity=Decimal("10"),
+                unit_code="godz",
+                unit_price=Decimal("200.00"),
+                line_net_amount=Decimal("2000.00"),
+                tax_category="S",
+                tax_rate=Decimal("23"),
             )
         ],
         note="Termin płatności: 14 dni",

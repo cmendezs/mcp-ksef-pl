@@ -23,22 +23,23 @@ FA(3) structural differences from FA(2) that are implemented here:
 """
 
 import datetime as _dt
+from datetime import date as _date
 from decimal import ROUND_HALF_UP, Decimal
 
 from mcp_einvoicing_core import (
     BaseDocumentGenerator,
     DocumentGenerationError,
-    InvoiceDocument,
-    InvoiceParty,
-    VATSummary,
     format_amount,
 )
+from mcp_einvoicing_core.en16931 import EN16931Tax
 from mcp_einvoicing_core.xml_utils import xml_escape
 
 from .models import (
     KSeFAttachment,
     KSeFCorrectionRef,
     KSeFFA3Options,
+    KSeFInvoice,
+    KSeFParty,
     KSeFPodmiot3,
     KSeFPodmiotUpowazniony,
 )
@@ -56,23 +57,29 @@ _VAT_RATE_FIELD: dict[str, int] = {
 }
 _EXEMPT_FIELD = 5  # P_13_5: exempt (zwolnienie z VAT)
 
+# UNCL5305 category to KSeF exemption code
+_KSEF_EXEMPTION: dict[str, str] = {"AE": "OO", "O": "NP", "E": "ZW"}
+
 
 def _d(value: Decimal) -> str:
     """Round to 2 dp and format as string."""
     return format_amount(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def _party_block(party: InvoiceParty, tag: str) -> str:
+def _ksef_exempt_code(category: str) -> str | None:
+    """Map UNCL5305 VAT category to KSeF-specific exemption code for P_12_XII."""
+    return _KSEF_EXEMPTION.get(category.upper())
+
+
+def _party_block(party: KSeFParty, tag: str) -> str:
     """Render a Podmiot1 (seller) or Podmiot2 (buyer) XML block."""
-    name = party.name or f"{party.first_name or ''} {party.last_name or ''}".strip()
-    nip = party.tax_id.identifier if party.tax_id.country_code.upper() == "PL" else ""
+    nip = party.nip or ""
 
     id_block = f"<NIP>{xml_escape(nip)}</NIP>\n" if nip else ""
-    eu_vat = next((t for t in party.alt_tax_ids if t.country_code.upper() != "PL"), None)
-    if eu_vat:
-        id_block += f"<KodUE>{xml_escape(eu_vat.country_code.upper())}</KodUE>\n"
-        id_block += f"<NrVatUE>{xml_escape(eu_vat.identifier)}</NrVatUE>\n"
-    id_block += f"<Nazwa>{xml_escape(name)}</Nazwa>\n"
+    if party.eu_vat_country and party.eu_vat_id:
+        id_block += f"<KodUE>{xml_escape(party.eu_vat_country.upper())}</KodUE>\n"
+        id_block += f"<NrVatUE>{xml_escape(party.eu_vat_id)}</NrVatUE>\n"
+    id_block += f"<Nazwa>{xml_escape(party.name)}</Nazwa>\n"
 
     addr_block = ""
     if party.address:
@@ -80,13 +87,13 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
         addr_block = (
             f"<Adres>\n"
             f"  <KodKraju>{xml_escape(a.country_code.upper())}</KodKraju>\n"
-            f"  <AdresL1>{xml_escape(a.street or '')}</AdresL1>\n"
+            f"  <AdresL1>{xml_escape(a.line_one)}</AdresL1>\n"
             + (
-                f"  <KodPocztowy>{xml_escape(a.postal_code)}</KodPocztowy>\n"
-                if a.postal_code else ""
+                f"  <KodPocztowy>{xml_escape(a.postcode)}</KodPocztowy>\n"
+                if a.postcode else ""
             )
-            + f"  <Miejscowosc>{xml_escape(a.city or '')}</Miejscowosc>\n"
-            + (f"  <Wojewodztwo>{xml_escape(a.province)}</Wojewodztwo>\n" if a.province else "")
+            + f"  <Miejscowosc>{xml_escape(a.city)}</Miejscowosc>\n"
+            + (f"  <Wojewodztwo>{xml_escape(a.region)}</Wojewodztwo>\n" if a.region else "")
             + "</Adres>\n"
         )
 
@@ -100,80 +107,83 @@ def _party_block(party: InvoiceParty, tag: str) -> str:
     )
 
 
-def _vat_summary_fields(summaries: list[VATSummary]) -> str:
+def _vat_summary_fields(summaries: list[EN16931Tax]) -> str:
     """Render P_13_x / P_14_x / P_15 fields from VAT summary list."""
     fields: dict[str, str] = {}
     total_gross = Decimal("0")
 
     for s in summaries:
-        rate_str = str(int(s.vat_rate)) if s.vat_rate == int(s.vat_rate) else str(s.vat_rate)
+        rate_str = str(int(s.rate)) if s.rate == int(s.rate) else str(s.rate)
         idx = _VAT_RATE_FIELD.get(rate_str)
+        category = s.category.upper()
 
-        if idx is not None:
-            fields[f"P_13_{idx}"] = _d(s.taxable_base)
-            if s.vat_amount > 0:
-                fields[f"P_14_{idx}"] = _d(s.vat_amount)
-            total_gross += s.taxable_base + s.vat_amount
-        elif s.vat_exemption_code:
-            code = s.vat_exemption_code.upper()
-            if code == "OO":
-                fields["P_13_6_1"] = _d(s.taxable_base)
-            elif code == "NP":
-                fields["P_13_7"] = _d(s.taxable_base)
-            else:
-                # ZW (zwolnienie) and any unrecognised code → P_13_5 (exempt)
-                fields["P_13_5"] = _d(s.taxable_base)
-            total_gross += s.taxable_base
+        if idx is not None and category in ("S", "Z"):
+            # Standard rate band: use the rate-based field index
+            fields[f"P_13_{idx}"] = _d(s.taxable_amount)
+            if s.tax_amount > 0:
+                fields[f"P_14_{idx}"] = _d(s.tax_amount)
+            total_gross += s.taxable_amount + s.tax_amount
+        elif category == "AE":
+            fields["P_13_6_1"] = _d(s.taxable_amount)
+            total_gross += s.taxable_amount
+        elif category == "O":
+            fields["P_13_7"] = _d(s.taxable_amount)
+            total_gross += s.taxable_amount
+        elif category == "E":
+            # ZW (zwolnienie) and exempt categories
+            fields["P_13_5"] = _d(s.taxable_amount)
+            total_gross += s.taxable_amount
         else:
             # Unknown rate — put in field index 1 (23%) as a fallback
-            fields["P_13_1"] = _d(s.taxable_base)
-            fields["P_14_1"] = _d(s.vat_amount)
-            total_gross += s.taxable_base + s.vat_amount
+            fields["P_13_1"] = _d(s.taxable_amount)
+            fields["P_14_1"] = _d(s.tax_amount)
+            total_gross += s.taxable_amount + s.tax_amount
 
     fields["P_15"] = _d(total_gross)
 
     return "\n".join(f"<{k}>{v}</{k}>" for k, v in fields.items())
 
 
-def _invoice_lines(invoice: InvoiceDocument) -> str:
+def _invoice_lines(invoice: KSeFInvoice) -> str:
     rows = []
-    for line in invoice.lines:
+    for line in invoice.line_items:
         rate_str = (
-            str(int(line.vat_rate)) if line.vat_rate == int(line.vat_rate)
-            else str(line.vat_rate)
+            str(int(line.tax_rate)) if line.tax_rate == int(line.tax_rate)
+            else str(line.tax_rate)
         )
+        exempt_code = _ksef_exempt_code(line.tax_category)
         rows.append(
             f"  <FaWiersz>\n"
-            f"    <NrWierszaFa>{line.line_number}</NrWierszaFa>\n"
-            f"    <P_7>{xml_escape(line.description)}</P_7>\n"
-            f"    <P_8A>{xml_escape(line.unit_of_measure or 'szt')}</P_8A>\n"
+            f"    <NrWierszaFa>{xml_escape(line.line_id)}</NrWierszaFa>\n"
+            f"    <P_7>{xml_escape(line.name)}</P_7>\n"
+            f"    <P_8A>{xml_escape(line.unit_code or 'szt')}</P_8A>\n"
             f"    <P_8B>{format_amount(line.quantity)}</P_8B>\n"
             f"    <P_9A>{_d(line.unit_price)}</P_9A>\n"
-            f"    <P_11>{_d(line.total_price)}</P_11>\n"
+            f"    <P_11>{_d(line.line_net_amount)}</P_11>\n"
             f"    <P_12>{xml_escape(rate_str)}</P_12>\n"
             + (
-                f"    <P_12_XII>{xml_escape(line.vat_exemption_code)}</P_12_XII>\n"
-                if line.vat_exemption_code else ""
+                f"    <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>\n"
+                if exempt_code else ""
             )
             + "  </FaWiersz>\n"
         )
     return "<FaWiersze>\n" + "".join(rows) + "</FaWiersze>\n"
 
 
-def _payment_block(invoice: InvoiceDocument) -> str:
-    if not invoice.payment:
+def _payment_block(invoice: KSeFInvoice) -> str:
+    if not invoice.payment_means:
         return ""
-    p = invoice.payment
+    pm = invoice.payment_means
     parts = []
-    if p.due_date:
-        parts.append(f"<P_6>{xml_escape(str(p.due_date))}</P_6>")
-    if p.iban:
-        parts.append(f"<RachunekBankowy><NrRB>{xml_escape(p.iban)}</NrRB></RachunekBankowy>")
+    if invoice.due_date:
+        parts.append(f"<P_6>{xml_escape(str(invoice.due_date))}</P_6>")
+    if pm.iban:
+        parts.append(f"<RachunekBankowy><NrRB>{xml_escape(pm.iban)}</NrRB></RachunekBankowy>")
     return "\n".join(parts)
 
 
 class FA2Generator(BaseDocumentGenerator):
-    """Generates KSeF FA(2) XML invoices from InvoiceDocument instances."""
+    """Generates KSeF FA(2) XML invoices from KSeFInvoice instances."""
 
     def get_format_name(self) -> str:
         return "FA(2)"
@@ -184,10 +194,10 @@ class FA2Generator(BaseDocumentGenerator):
     def get_namespace(self) -> str:
         return _NS
 
-    async def generate(self, invoice: InvoiceDocument) -> str:
+    async def generate(self, invoice: KSeFInvoice) -> str:
         try:
             now_utc = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-            vat_fields = _vat_summary_fields(invoice.vat_summary or [])
+            vat_fields = _vat_summary_fields(invoice.tax_lines or [])
             payment = _payment_block(invoice)
 
             xml = (
@@ -203,9 +213,9 @@ class FA2Generator(BaseDocumentGenerator):
                 f"  {_party_block(invoice.seller, 'Podmiot1').strip()}\n"
                 f"  {_party_block(invoice.buyer, 'Podmiot2').strip()}\n"
                 f"  <Fa>\n"
-                f"    <KodWaluty>{xml_escape(invoice.currency)}</KodWaluty>\n"
-                f"    <P_1>{xml_escape(str(invoice.date))}</P_1>\n"
-                f"    <P_2>{xml_escape(invoice.number)}</P_2>\n"
+                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>\n"
+                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>\n"
+                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>\n"
                 f"    {vat_fields}\n"
                 f"    {payment}\n"
                 f"    <Adnotacje>\n"
@@ -233,47 +243,41 @@ class FA2Generator(BaseDocumentGenerator):
 # ---------------------------------------------------------------------------
 
 
-def _adres_block(party: InvoiceParty) -> str:
+def _adres_block(party: KSeFParty) -> str:
     """Build a TAdres block (KodKraju + AdresL1 + optional AdresL2).
 
     TAdres in both FA(2) and FA(3) XSD contains only KodKraju, AdresL1, AdresL2,
-    and GLN.  Structured postal/city fields are composed into AdresL1.
+    and GLN.  EN16931Address.line_one is already a composed single-line address.
     """
     if not party.address:
         return ""
     a = party.address
 
-    parts = [a.street or "", a.postal_code or "", a.city or ""]
-    adres_l1 = " ".join(p for p in parts if p).strip(", ") or xml_escape(party.name or "")
-
     lines = [
         "<Adres>",
         f"  <KodKraju>{xml_escape(a.country_code.upper())}</KodKraju>",
-        f"  <AdresL1>{xml_escape(adres_l1)}</AdresL1>",
+        f"  <AdresL1>{xml_escape(a.line_one)}</AdresL1>",
     ]
-    if a.province:
-        # AdresL2 is optional — use for province/region when present
-        lines.append(f"  <AdresL2>{xml_escape(a.province)}</AdresL2>")
-    gln = a.gln if a else None
-    if gln:
-        lines.append(f"  <GLN>{xml_escape(str(gln))}</GLN>")
+    if a.region:
+        # AdresL2 is optional — use for region/province when present
+        lines.append(f"  <AdresL2>{xml_escape(a.region)}</AdresL2>")
+    if party.gln:
+        lines.append(f"  <GLN>{xml_escape(str(party.gln))}</GLN>")
     lines.append("</Adres>")
     return "\n".join(lines)
 
 
-def _fa3_seller_block(seller: InvoiceParty) -> str:
+def _fa3_seller_block(seller: KSeFParty) -> str:
     """Build <Podmiot1> for FA(3)."""
-    name = seller.name or f"{seller.first_name or ''} {seller.last_name or ''}".strip()
-    nip = seller.tax_id.identifier if seller.tax_id.country_code.upper() == "PL" else ""
+    nip = seller.nip or ""
 
     id_lines = []
     if nip:
         id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
-    eu_vat = next((t for t in seller.alt_tax_ids if t.country_code.upper() != "PL"), None)
-    if eu_vat:
-        id_lines.append(f"<KodUE>{xml_escape(eu_vat.country_code.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(eu_vat.identifier)}</NrVatUE>")
-    id_lines.append(f"<Nazwa>{xml_escape(name)}</Nazwa>")
+    if seller.eu_vat_country and seller.eu_vat_id:
+        id_lines.append(f"<KodUE>{xml_escape(seller.eu_vat_country.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{xml_escape(seller.eu_vat_id)}</NrVatUE>")
+    id_lines.append(f"<Nazwa>{xml_escape(seller.name)}</Nazwa>")
 
     adres = _adres_block(seller)
 
@@ -288,26 +292,24 @@ def _fa3_seller_block(seller: InvoiceParty) -> str:
     return "\n".join(lines)
 
 
-def _fa3_buyer_block(buyer: InvoiceParty) -> str:
+def _fa3_buyer_block(buyer: KSeFParty) -> str:
     """Build <Podmiot2> for FA(3), including mandatory JST and GV flags.
 
     JST=2 means the invoice does not concern a subordinate local-government unit.
     GV=2  means the invoice does not concern a VAT-group member.
     Both default to 2 (not applicable) for standard B2B invoices.
     """
-    name = buyer.name or f"{buyer.first_name or ''} {buyer.last_name or ''}".strip()
-    nip = buyer.tax_id.identifier if buyer.tax_id.country_code.upper() == "PL" else ""
+    nip = buyer.nip or ""
 
     id_lines: list[str] = []
-    eu_vat_buyer = next((t for t in buyer.alt_tax_ids if t.country_code.upper() != "PL"), None)
     if nip:
         id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
-    elif eu_vat_buyer:
-        id_lines.append(f"<KodUE>{xml_escape(eu_vat_buyer.country_code.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(eu_vat_buyer.identifier)}</NrVatUE>")
+    elif buyer.eu_vat_country and buyer.eu_vat_id:
+        id_lines.append(f"<KodUE>{xml_escape(buyer.eu_vat_country.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{xml_escape(buyer.eu_vat_id)}</NrVatUE>")
     else:
         id_lines.append("<BrakID>1</BrakID>")
-    id_lines.append(f"<Nazwa>{xml_escape(name)}</Nazwa>")
+    id_lines.append(f"<Nazwa>{xml_escape(buyer.name)}</Nazwa>")
 
     adres = _adres_block(buyer)
 
@@ -324,7 +326,7 @@ def _fa3_buyer_block(buyer: InvoiceParty) -> str:
     return "\n".join(lines)
 
 
-def _fa3_vat_fields(summaries: list[VATSummary]) -> tuple[str, str]:
+def _fa3_vat_fields(summaries: list[EN16931Tax]) -> tuple[str, str]:
     """Return (vat_lines_xml, p15_xml) from the VAT summary list.
 
     The XSD groups (P_13_x, P_14_x) into optional inner sequences per rate band.
@@ -335,28 +337,30 @@ def _fa3_vat_fields(summaries: list[VATSummary]) -> tuple[str, str]:
     total_gross = Decimal("0")
 
     for s in summaries:
-        rate_str = str(int(s.vat_rate)) if s.vat_rate == int(s.vat_rate) else str(s.vat_rate)
+        rate_str = str(int(s.rate)) if s.rate == int(s.rate) else str(s.rate)
         idx = _VAT_RATE_FIELD.get(rate_str)
+        category = s.category.upper()
 
-        if idx is not None:
-            band_lines.append(f"<P_13_{idx}>{_d(s.taxable_base)}</P_13_{idx}>")
-            if s.vat_amount > 0:
-                band_lines.append(f"<P_14_{idx}>{_d(s.vat_amount)}</P_14_{idx}>")
-            total_gross += s.taxable_base + s.vat_amount
-        elif s.vat_exemption_code:
-            code = s.vat_exemption_code.upper()
-            if code == "OO":
-                band_lines.append(f"<P_13_6_1>{_d(s.taxable_base)}</P_13_6_1>")
-            elif code == "NP":
-                band_lines.append(f"<P_13_7>{_d(s.taxable_base)}</P_13_7>")
-            else:
-                # ZW (zwolnienie) and any unrecognised code → P_13_5 (exempt)
-                band_lines.append(f"<P_13_5>{_d(s.taxable_base)}</P_13_5>")
-            total_gross += s.taxable_base
+        if idx is not None and category in ("S", "Z"):
+            # Standard rate band
+            band_lines.append(f"<P_13_{idx}>{_d(s.taxable_amount)}</P_13_{idx}>")
+            if s.tax_amount > 0:
+                band_lines.append(f"<P_14_{idx}>{_d(s.tax_amount)}</P_14_{idx}>")
+            total_gross += s.taxable_amount + s.tax_amount
+        elif category == "AE":
+            band_lines.append(f"<P_13_6_1>{_d(s.taxable_amount)}</P_13_6_1>")
+            total_gross += s.taxable_amount
+        elif category == "O":
+            band_lines.append(f"<P_13_7>{_d(s.taxable_amount)}</P_13_7>")
+            total_gross += s.taxable_amount
+        elif category == "E":
+            # ZW (zwolnienie) and any exempt category
+            band_lines.append(f"<P_13_5>{_d(s.taxable_amount)}</P_13_5>")
+            total_gross += s.taxable_amount
         else:
-            band_lines.append(f"<P_13_1>{_d(s.taxable_base)}</P_13_1>")
-            band_lines.append(f"<P_14_1>{_d(s.vat_amount)}</P_14_1>")
-            total_gross += s.taxable_base + s.vat_amount
+            band_lines.append(f"<P_13_1>{_d(s.taxable_amount)}</P_13_1>")
+            band_lines.append(f"<P_14_1>{_d(s.tax_amount)}</P_14_1>")
+            total_gross += s.taxable_amount + s.tax_amount
 
     vat_xml = "\n".join(band_lines)
     p15_xml = f"<P_15>{_d(total_gross)}</P_15>"
@@ -392,28 +396,29 @@ def _fa3_adnotacje() -> str:
     )
 
 
-def _fa3_wiersz_lines(invoice: InvoiceDocument) -> str:
+def _fa3_wiersz_lines(invoice: KSeFInvoice) -> str:
     """Return repeated <FaWiersz> elements (no wrapper in FA(3))."""
     rows: list[str] = []
-    for line in invoice.lines:
+    for line in invoice.line_items:
         rate_str = (
-            str(int(line.vat_rate))
-            if line.vat_rate == int(line.vat_rate)
-            else str(line.vat_rate)
+            str(int(line.tax_rate))
+            if line.tax_rate == int(line.tax_rate)
+            else str(line.tax_rate)
         )
+        exempt_code = _ksef_exempt_code(line.tax_category)
         row_lines = [
             "<FaWiersz>",
-            f"  <NrWierszaFa>{line.line_number}</NrWierszaFa>",
-            f"  <P_7>{xml_escape(line.description)}</P_7>",
-            f"  <P_8A>{xml_escape(line.unit_of_measure or 'szt')}</P_8A>",
+            f"  <NrWierszaFa>{xml_escape(line.line_id)}</NrWierszaFa>",
+            f"  <P_7>{xml_escape(line.name)}</P_7>",
+            f"  <P_8A>{xml_escape(line.unit_code or 'szt')}</P_8A>",
             f"  <P_8B>{format_amount(line.quantity)}</P_8B>",
             f"  <P_9A>{_d(line.unit_price)}</P_9A>",
-            f"  <P_11>{_d(line.total_price)}</P_11>",
+            f"  <P_11>{_d(line.line_net_amount)}</P_11>",
             f"  <P_12>{xml_escape(rate_str)}</P_12>",
         ]
-        if line.vat_exemption_code:
+        if exempt_code:
             row_lines.append(
-                f"  <P_12_XII>{xml_escape(line.vat_exemption_code)}</P_12_XII>"
+                f"  <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>"
             )
         row_lines.append("</FaWiersz>")
         rows.append("\n".join(row_lines))
@@ -477,7 +482,7 @@ def _fa3_correction_block(ref: KSeFCorrectionRef) -> str:
 
 
 def _fa3_platnosc_block(
-    invoice: InvoiceDocument,
+    invoice: KSeFInvoice,
     ipksef: str = "",
     link_do_platnosci: str = "",
 ) -> str:
@@ -486,9 +491,9 @@ def _fa3_platnosc_block(
     FormaPlatnosci=6 (przelew bankowy) is the standard default for B2B invoices.
     ipksef and link_do_platnosci are the KSeF-specific payment identifiers (PL-2.2).
     """
-    p = invoice.payment if invoice.payment else None
-    has_iban = p and p.iban
-    has_due_date = p and p.due_date
+    pm = invoice.payment_means
+    has_iban = pm and pm.iban
+    has_due_date = invoice.due_date is not None
     if not has_iban and not has_due_date and not ipksef and not link_do_platnosci:
         return ""
 
@@ -496,14 +501,14 @@ def _fa3_platnosc_block(
     if has_due_date:
         parts.append(
             f"  <TerminPlatnosci>\n"
-            f"    <Termin>{xml_escape(str(p.due_date))}</Termin>\n"
+            f"    <Termin>{xml_escape(str(invoice.due_date))}</Termin>\n"
             f"    <FormaPlatnosci>6</FormaPlatnosci>\n"
             f"  </TerminPlatnosci>"
         )
     if has_iban:
         parts.append(
             f"  <RachunekBankowy>\n"
-            f"    <NrRB>{xml_escape(p.iban)}</NrRB>\n"
+            f"    <NrRB>{xml_escape(pm.iban)}</NrRB>\n"
             f"  </RachunekBankowy>"
         )
     if ipksef:
@@ -540,16 +545,16 @@ class FA3Generator(BaseDocumentGenerator):
 
     async def generate(  # noqa: C901
         self,
-        invoice: InvoiceDocument,
+        invoice: KSeFInvoice,
         *,
         options: KSeFFA3Options | None = None,
     ) -> str:
         """Generate a KSeF-compliant FA(3) XML invoice.
 
         Args:
-            invoice: Structured invoice data.  seller.tax_id must be a Polish
-                     NIP (10 digits).  buyer.tax_id may be a Polish NIP, an EU
-                     VAT number, or absent (BrakID).
+            invoice: Structured invoice data (KSeFInvoice).  seller.nip must be a
+                     Polish NIP (10 digits).  buyer.nip may be a Polish NIP, or
+                     eu_vat_country/eu_vat_id for EU cross-border, or neither (BrakID).
             options: Optional FA(3) extensions — correction reference, payment
                      identifiers, attachments, additional parties (PL-2.2/2.3/2.4/4.1).
 
@@ -559,9 +564,9 @@ class FA3Generator(BaseDocumentGenerator):
         opts = options or KSeFFA3Options()
 
         # PL-4.1: 50,000-line limit for collective correction invoices.
-        if len(invoice.lines) > 50_000:
+        if len(invoice.line_items) > 50_000:
             raise DocumentGenerationError(
-                f"Invoice has {len(invoice.lines)} lines; KSeF imposes a 50,000-line limit."
+                f"Invoice has {len(invoice.line_items)} lines; KSeF imposes a 50,000-line limit."
             )
 
         # PL-4.1: Correction invoices require a KSeF reference.
@@ -574,7 +579,7 @@ class FA3Generator(BaseDocumentGenerator):
 
         try:
             now_utc = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-            vat_xml, p15_xml = _fa3_vat_fields(invoice.vat_summary or [])
+            vat_xml, p15_xml = _fa3_vat_fields(invoice.tax_lines or [])
             platnosc = _fa3_platnosc_block(
                 invoice,
                 ipksef=opts.ipksef,
@@ -608,9 +613,9 @@ class FA3Generator(BaseDocumentGenerator):
             parts += [
                 # --- Fa ---
                 "  <Fa>",
-                f"    <KodWaluty>{xml_escape(invoice.currency)}</KodWaluty>",
-                f"    <P_1>{xml_escape(str(invoice.date))}</P_1>",
-                f"    <P_2>{xml_escape(invoice.number)}</P_2>",
+                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>",
+                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>",
+                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>",
             ]
 
             # VAT rate bands (only non-zero bands are emitted)
@@ -634,7 +639,7 @@ class FA3Generator(BaseDocumentGenerator):
                     parts.append(f"    {cl}")
 
             # Invoice lines (direct FaWiersz children, no wrapper)
-            if invoice.lines:
+            if invoice.line_items:
                 for wl in _fa3_wiersz_lines(invoice).splitlines():
                     parts.append(f"    {wl}")
 
@@ -667,3 +672,122 @@ class FA3Generator(BaseDocumentGenerator):
             raise
         except Exception as exc:
             raise DocumentGenerationError(f"FA(3) generation failed: {exc}") from exc
+
+
+# ---------------------------------------------------------------------------
+# InvoiceDocument → KSeFInvoice conversion (used by server.py tool functions)
+# ---------------------------------------------------------------------------
+
+
+def _doc_to_ksefinvoice(doc: object) -> KSeFInvoice:
+    """Convert an InvoiceDocument to KSeFInvoice, auto-computing EN 16931 totals.
+
+    Called by server.py tool functions. Not intended for direct use.
+    """
+    from mcp_einvoicing_core import InvoiceDocument, InvoiceParty  # noqa: PLC0415
+    from mcp_einvoicing_core.en16931 import (  # noqa: PLC0415
+        EN16931Address,
+        EN16931LineItem,
+        EN16931PaymentMeans,
+    )
+
+    assert isinstance(doc, InvoiceDocument)
+
+    def _convert_party(party: InvoiceParty) -> KSeFParty:
+        name = party.name or f"{party.first_name or ''} {party.last_name or ''}".strip()
+        nip = party.tax_id.identifier if party.tax_id.country_code.upper() == "PL" else None
+        eu_vat = next((t for t in party.alt_tax_ids if t.country_code.upper() != "PL"), None)
+        addr = None
+        if party.address:
+            a = party.address
+            addr = EN16931Address(
+                line_one=a.street or "-",
+                city=a.city or "-",
+                postcode=a.postal_code or "00000",
+                country_code=a.country_code,
+                region=a.province,
+            )
+        return KSeFParty(
+            name=name,
+            address=addr,
+            nip=nip,
+            eu_vat_country=eu_vat.country_code if eu_vat else None,
+            eu_vat_id=eu_vat.identifier if eu_vat else None,
+            gln=party.address.gln if party.address else None,
+        )
+
+    def _uncl5305(code: str | None, rate: Decimal) -> str:
+        if rate > 0:
+            return "S"
+        if not code:
+            return "Z"
+        c = code.upper()
+        if c == "OO":
+            return "AE"
+        if c == "NP":
+            return "O"
+        return "E"  # ZW and others
+
+    line_items = [
+        EN16931LineItem(
+            line_id=str(line.line_number),
+            name=line.description,
+            quantity=line.quantity if line.quantity is not None else Decimal("1"),
+            unit_code=line.unit_of_measure or "C62",
+            unit_price=line.unit_price,
+            line_net_amount=line.total_price,
+            tax_category=_uncl5305(line.vat_exemption_code, line.vat_rate),
+            tax_rate=line.vat_rate,
+        )
+        for line in doc.lines
+    ]
+
+    tax_lines = [
+        EN16931Tax(
+            category=_uncl5305(s.vat_exemption_code, s.vat_rate),
+            rate=s.vat_rate,
+            taxable_amount=s.taxable_base,
+            tax_amount=s.vat_amount,
+        )
+        for s in (doc.vat_summary or [])
+    ]
+
+    payment_means = None
+    due_date = None
+    if doc.payment:
+        p = doc.payment
+        payment_means = EN16931PaymentMeans(
+            type_code=p.payment_method_code or "30",
+            iban=p.iban,
+        )
+        if p.due_date:
+            due_date = _date.fromisoformat(p.due_date)
+
+    sum_of_lines = sum((li.line_net_amount for li in line_items), Decimal("0"))
+    tax_total = sum((t.tax_amount for t in tax_lines), Decimal("0"))
+    tax_excl = (
+        sum((t.taxable_amount for t in tax_lines), Decimal("0"))
+        if tax_lines
+        else sum_of_lines
+    )
+    tax_incl = tax_excl + tax_total
+
+    return KSeFInvoice(
+        profile="KSeF",
+        invoice_number=doc.number,
+        invoice_date=_date.fromisoformat(doc.date),
+        invoice_type_code=doc.document_type,
+        currency_code=doc.currency,
+        seller=_convert_party(doc.seller),
+        buyer=_convert_party(doc.buyer),
+        sum_of_line_net_amounts=sum_of_lines,
+        tax_exclusive_amount=tax_excl,
+        tax_total=tax_total,
+        tax_inclusive_amount=tax_incl,
+        amount_due=tax_incl,
+        tax_lines=tax_lines,
+        line_items=line_items,
+        payment_means=payment_means,
+        due_date=due_date,
+        note=doc.note,
+    )

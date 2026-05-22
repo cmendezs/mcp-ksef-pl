@@ -18,7 +18,7 @@ from mcp_einvoicing_core.confirmation import ConfirmationGate
 from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 
 from .config import KSeFSettings
-from .generator import FA2Generator, FA3Generator
+from .generator import FA2Generator, FA3Generator, _doc_to_ksefinvoice
 from .lifecycle import KSeFLifecycleManager
 from .models import KSeFFA3Options
 from .parser import FA2Parser
@@ -65,7 +65,8 @@ async def generate_fa2_invoice(invoice: InvoiceDocument) -> str:
     Returns the FA(2) XML string ready for submission to KSeF.
     The seller's tax_id must be a Polish NIP (10 digits).
     """
-    return await _fa2_generator.generate(invoice)
+    ksefinvoice = _doc_to_ksefinvoice(invoice)
+    return await _fa2_generator.generate(ksefinvoice)
 
 
 @mcp.tool
@@ -91,7 +92,8 @@ async def generate_fa3_invoice(
 
     Returns the FA(3) XML string ready for submit_invoice_to_ksef.
     """
-    return await _fa3_generator.generate(invoice, options=options)
+    ksefinvoice = _doc_to_ksefinvoice(invoice)
+    return await _fa3_generator.generate(ksefinvoice, options=options)
 
 
 @mcp.tool
@@ -299,7 +301,8 @@ async def generate_peppol_invoice(invoice: InvoiceDocument) -> str:
     Use this for cross-border B2B invoicing via the Peppol network.
     For domestic Polish invoicing, use generate_fa2_invoice instead.
     """
-    return await _peppol_generator.generate(invoice)
+    ksefinvoice = _doc_to_ksefinvoice(invoice)
+    return await _peppol_generator.generate(ksefinvoice)
 
 
 # ---------------------------------------------------------------------------

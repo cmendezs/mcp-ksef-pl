@@ -42,24 +42,33 @@ KSeF-specific extensions layered on top of EN 16931:
 
 from __future__ import annotations
 
-from mcp_einvoicing_core.en16931 import EN16931Invoice, EN16931Party
+from mcp_einvoicing_core.en16931 import EN16931Address, EN16931Invoice, EN16931Party
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class KSeFParty(EN16931Party):
-    """KSeF trading party extending EN16931Party with NIP support.
+    """KSeF trading party extending EN16931Party with Polish NIP and EU VAT fields.
 
     KSeF requires NIP (Numer Identyfikacji Podatkowej) for PL taxpayers.
     For cross-border invoices where the seller/buyer does not have a NIP,
-    the EU VAT number is carried via the inherited vat_id field.
-    The KSeF generators extract the NIP from tax_id.identifier when
-    tax_id.country_code == "PL".
+    the EU VAT country and number are carried via eu_vat_country / eu_vat_id.
 
-    GLN is carried on party.address.gln (core PartyAddress field) and emitted
-    as <GLN> in TAdres blocks by the FA(2)/FA(3) generators when present.
+    address is overridden to Optional so that cross-border parties without a
+    Polish address can be represented (BrakID path in FA(3) buyer block).
+
+    GLN is carried at the party level and emitted as <GLN> in TAdres blocks
+    by the FA(2)/FA(3) generators when present.
     """
 
-    pass
+    address: EN16931Address | None = None  # type: ignore[assignment]
+    nip: str | None = Field(None, description="Polish NIP (10 digits)")
+    eu_vat_country: str | None = Field(
+        None, description="EU VAT country code for non-PL sellers/buyers"
+    )
+    eu_vat_id: str | None = Field(
+        None, description="EU VAT number for non-PL sellers/buyers"
+    )
+    gln: str | None = Field(None, description="GS1 Global Location Number")
 
 
 class KSeFInvoice(EN16931Invoice):
@@ -158,7 +167,7 @@ class KSeFCorrectionRef(BaseModel):
 
 
 class KSeFFA3Options(BaseModel):
-    """Optional FA(3) extensions passed alongside InvoiceDocument to generate_fa3_invoice.
+    """Optional FA(3) extensions passed alongside KSeFInvoice to generate_fa3_invoice.
 
     All fields are optional and default to no-op values so callers that do not
     need any extension can omit this parameter entirely.

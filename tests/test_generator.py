@@ -1,9 +1,9 @@
 """Tests for the FA(2) and FA(3) XML generators."""
 
 import pytest
-from mcp_einvoicing_core import InvoiceDocument
 
 from mcp_ksef_pl.generator import FA2Generator, FA3Generator
+from mcp_ksef_pl.models import KSeFInvoice
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
@@ -21,14 +21,14 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_contains_namespace(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert _NS in xml
 
     @pytest.mark.asyncio
     async def test_generate_header_fields(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<KodFormularza" in xml
@@ -38,7 +38,7 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_seller_nip(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Podmiot1>" in xml
@@ -46,14 +46,14 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_buyer(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Podmiot2>" in xml
 
     @pytest.mark.asyncio
     async def test_generate_invoice_fields(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<P_1>2024-03-15</P_1>" in xml
@@ -62,7 +62,7 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_vat_fields(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         # 23% VAT → P_13_1, P_14_1
@@ -72,7 +72,7 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_invoice_lines(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<FaWiersze>" in xml
@@ -81,7 +81,7 @@ class TestFA2Generator:
 
     @pytest.mark.asyncio
     async def test_generate_note(
-        self, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<StopkaFaktury>" in xml
@@ -100,7 +100,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_namespace(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert _NS3 in xml
@@ -109,7 +109,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_header_fields(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert 'kodSystemowy="FA (3)"' in xml
@@ -120,7 +120,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_seller_nip(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Podmiot1>" in xml
@@ -128,7 +128,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_buyer_has_jst_and_gv_flags(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Podmiot2>" in xml
@@ -138,7 +138,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_address_uses_adresl1(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         # TAdres in FA(3) uses AdresL1 (composed) — no KodPocztowy or Miejscowosc
@@ -148,7 +148,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_invoice_fields(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<P_1>2024-03-15</P_1>" in xml
@@ -157,7 +157,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_vat_fields(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<P_13_1>2000.00</P_13_1>" in xml
@@ -166,7 +166,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_adnotacje_structure(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Adnotacje>" in xml
@@ -180,14 +180,14 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_rodzaj_faktury_present(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<RodzajFaktury>VAT</RodzajFaktury>" in xml
 
     @pytest.mark.asyncio
     async def test_no_fawiersze_wrapper(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         # FA(3) has no <FaWiersze> wrapper — lines are direct <FaWiersz> children of <Fa>
@@ -197,7 +197,7 @@ class TestFA3Generator:
 
     @pytest.mark.asyncio
     async def test_note_in_stopka(
-        self, generator: FA3Generator, sample_invoice: InvoiceDocument
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         # Note must be in <Stopka><Informacje>, not inside <Fa>
@@ -212,7 +212,7 @@ class TestFA3Generator:
     async def test_no_note_omits_stopka(
         self,
         generator: FA3Generator,
-        sample_invoice: InvoiceDocument,
+        sample_invoice: KSeFInvoice,
     ) -> None:
         invoice_no_note = sample_invoice.model_copy(update={"note": None})
         xml = await generator.generate(invoice_no_note)
