@@ -93,6 +93,20 @@ jobs:
       - name: Build wheel and sdist
         run: uv build --no-sources
 
+      - name: Assert mcp-einvoicing-core upper-bound pin in wheel METADATA
+        # Regression check for uv bug #9811 — built wheel must retain the <2.0.0 upper-bound pin.
+        run: python -c "
+          import zipfile, glob, sys, re
+          whl = glob.glob('dist/*.whl')
+          assert whl, 'No wheel found in dist/'
+          with zipfile.ZipFile(whl[0]) as z:
+              m = next((n for n in z.namelist() if n.endswith('.dist-info/METADATA')), None)
+              assert m, 'No METADATA file found in wheel'
+              content = z.read(m).decode()
+          ok = any(re.search(r'Requires-Dist: mcp-einvoicing-core.*<', l) for l in content.splitlines())
+          sys.exit(0 if ok else 'ERROR: mcp-einvoicing-core upper-bound pin missing from wheel METADATA')
+        "
+
       - name: Upload distribution packages
         uses: actions/upload-artifact@v4
         with:
