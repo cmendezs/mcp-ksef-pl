@@ -67,6 +67,11 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "BaseDocumentSigner",
         "XAdESEPESSigner",
         "XAdESSignerConfig",
+        # OVERRIDE-REASON: XMLDSigSigner/XMLDSigSignerConfig (core v1.4.0) is
+        # the BR NF-e plain enveloped XML-DSig signer; not applicable to
+        # KSeF FA(3)/FA(2), which use XAdES-EPES / Peppol BIS 3.0 signing
+        "XMLDSigSigner",
+        "XMLDSigSignerConfig",
     },
     # EN16931 classes are used via KSeFInvoice(EN16931Invoice) and KSeFParty(EN16931Party).
     # The specific sub-classes (EN16931LineItem, EN16931PaymentMeans) are accessed through
