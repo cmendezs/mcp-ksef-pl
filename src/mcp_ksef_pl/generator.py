@@ -182,7 +182,7 @@ def _payment_block(invoice: KSeFInvoice) -> str:
     return "\n".join(parts)
 
 
-class FA2Generator(BaseDocumentGenerator):
+class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
     """Generates KSeF FA(2) XML invoices from KSeFInvoice instances."""
 
     def get_format_name(self) -> str:
@@ -524,7 +524,7 @@ def _fa3_platnosc_block(
 # ---------------------------------------------------------------------------
 
 
-class FA3Generator(BaseDocumentGenerator):
+class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
     """Generates KSeF FA(3) XML invoices for use with KSeF API v2.
 
     FA(3) is required for all new invoice submissions via KSeF API v2 online

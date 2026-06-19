@@ -137,7 +137,7 @@ def _invoice_lines(invoice: KSeFInvoice) -> str:
     return lines
 
 
-class PeppolUBLGenerator(BaseDocumentGenerator):
+class PeppolUBLGenerator(BaseDocumentGenerator[KSeFInvoice]):
     """Generates Peppol BIS Billing 3.0 UBL 2.1 invoices (EN 16931)."""
 
     def get_format_name(self) -> str:
