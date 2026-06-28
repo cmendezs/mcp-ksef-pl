@@ -41,6 +41,22 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.4.0] - 2026-06-28
+#### Added
+- `KSeFInvoice.from_lines()` classmethod: auto-computes totals from line items and tax lines
+- `KSeFParty._sync_nip_to_vat_id` model validator: syncs NIP to `vat_id` for core serializer compatibility
+- Integration test scaffold with `tests/integration/` and manual-dispatch GitHub Actions workflow
+- Expanded KSeF authentication section in README.md and README.pl.md
+
+#### Changed
+- **[PL-FA3-2]** All tool signatures (`generate_fa2_invoice`, `generate_fa3_invoice`, `generate_peppol_invoice`) now accept `KSeFInvoice` directly; `_doc_to_ksefinvoice` shim removed
+- Peppol generator rewritten to delegate to core `EN16931UBLSerializer` via minimal `_PLUBLSerializer` subclass (FR/DE pattern)
+
+#### Resolved
+- **[PL-INV-1]** FA(3) namespace verified: `http://crd.gov.pl/wzor/2025/06/25/13775/`
+- **[PL-INV-2]** PINT-PL confirmed absent (404 on OpenPeppol docs, 2026-06-27)
+- **[PL-FA3-1]** FA(3) generator complete end-to-end
+
 ### [0.2.2] - 2026-05-31
 #### Added
 - **[PL-CORE-1]** `KSeFPeppolUBLSerializer(EN16931UBLSerializer)`: injects Peppol BIS 3.0
