@@ -11,16 +11,15 @@ from typing import Any
 from fastmcp import FastMCP
 from mcp_einvoicing_core import (
     DocumentValidationResult,
-    InvoiceDocument,
 )
 from mcp_einvoicing_core.base_server import assert_not_read_only
 from mcp_einvoicing_core.confirmation import ConfirmationGate
 from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
 
 from .config import KSeFSettings
-from .generator import FA2Generator, FA3Generator, _doc_to_ksefinvoice
+from .generator import FA2Generator, FA3Generator
 from .lifecycle import KSeFLifecycleManager
-from .models import KSeFFA3Options
+from .models import KSeFFA3Options, KSeFInvoice
 from .parser import FA2Parser
 from .party_validator import PolishPartyValidator, validate_nip, validate_regon
 from .peppol import PeppolUBLGenerator
@@ -59,29 +58,28 @@ _party_validator = PolishPartyValidator()
 
 
 @mcp.tool
-async def generate_fa2_invoice(invoice: InvoiceDocument) -> str:
+async def generate_fa2_invoice(invoice: KSeFInvoice) -> str:
     """Generate a KSeF-compliant FA(2) XML invoice from structured invoice data.
 
     Returns the FA(2) XML string ready for submission to KSeF.
-    The seller's tax_id must be a Polish NIP (10 digits).
+    The seller's nip must be a Polish NIP (10 digits).
     """
-    ksefinvoice = _doc_to_ksefinvoice(invoice)
-    return await _fa2_generator.generate(ksefinvoice)
+    return await _fa2_generator.generate(invoice)
 
 
 @mcp.tool
 async def generate_fa3_invoice(
-    invoice: InvoiceDocument,
+    invoice: KSeFInvoice,
     options: KSeFFA3Options | None = None,
 ) -> str:
     """Generate a KSeF-compliant FA(3) XML invoice from structured invoice data.
 
     FA(3) is required for all new invoice submissions via KSeF API v2.
-    Use this tool — not generate_fa2_invoice — before calling submit_invoice_to_ksef.
+    Use this tool, not generate_fa2_invoice, before calling submit_invoice_to_ksef.
 
-    The seller's tax_id must be a Polish NIP (10 digits).
-    The buyer's tax_id may be a Polish NIP, a EU VAT number (set alt_tax_id),
-    or absent (leave tax_id.identifier empty to emit <BrakID>).
+    The seller's nip must be a Polish NIP (10 digits).
+    The buyer's nip may be a Polish NIP, eu_vat_country/eu_vat_id for EU
+    cross-border, or neither (emits <BrakID>).
 
     Use the optional `options` parameter to supply:
       - IPKSeF / LinkDoPlatnosci payment identifiers (PL-2.2)
@@ -92,8 +90,7 @@ async def generate_fa3_invoice(
 
     Returns the FA(3) XML string ready for submit_invoice_to_ksef.
     """
-    ksefinvoice = _doc_to_ksefinvoice(invoice)
-    return await _fa3_generator.generate(ksefinvoice, options=options)
+    return await _fa3_generator.generate(invoice, options=options)
 
 
 @mcp.tool
@@ -295,14 +292,13 @@ async def validate_polish_regon(regon: str) -> dict[str, Any]:
 
 
 @mcp.tool
-async def generate_peppol_invoice(invoice: InvoiceDocument) -> str:
+async def generate_peppol_invoice(invoice: KSeFInvoice) -> str:
     """Generate a Peppol BIS Billing 3.0 / EN 16931 UBL 2.1 XML invoice.
 
     Use this for cross-border B2B invoicing via the Peppol network.
-    For domestic Polish invoicing, use generate_fa2_invoice instead.
+    For domestic Polish invoicing, use generate_fa3_invoice instead.
     """
-    ksefinvoice = _doc_to_ksefinvoice(invoice)
-    return await _peppol_generator.generate(ksefinvoice)
+    return await _peppol_generator.generate(invoice)
 
 
 # ---------------------------------------------------------------------------

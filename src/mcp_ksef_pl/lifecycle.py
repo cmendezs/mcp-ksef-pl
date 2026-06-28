@@ -28,10 +28,14 @@ KSeF API v2 submission flow
 
 Authentication note
 -------------------
-KSeF v2 uses a multi-step challenge/redeem flow to issue an AccessToken.  This
-module accepts an already-obtained AccessToken (passed as KSEF_SESSION_TOKEN or
-via the session_token tool parameter) and sends it as a Bearer token.  The auth
-flow itself must be completed by the caller.
+KSeF v2 uses a multi-step challenge/redeem flow to issue an AccessToken:
+  1. GET /api/online/Session/AuthorisationChallenge (obtain challenge + timestamp)
+  2. Build <InitSessionTokenRequest> XML, sign with qualified e-signature (PKCS#12)
+  3. POST /api/online/Session/AuthoriseXades (submit signed XML, receive AccessToken)
+  Token validity: approximately 2 hours from issuance.
+
+This module accepts an already-obtained AccessToken (passed as KSEF_SESSION_TOKEN
+or via the session_token tool parameter) and sends it as a Bearer token.
 
 Full auth documentation:
   https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
@@ -40,8 +44,7 @@ Invoice format note
 -------------------
 KSeF API v2 online sessions accept only FA(3) schema (systemCode "FA (3)",
 schemaVersion "1-0E").  FA(2) XML is not accepted for new submissions.
-[NEED] Implement FA(3) generator (generate_fa3_invoice tool) before attempting
-live submissions.  See roadmap-2026.md.
+FA(3) generator is implemented as generate_fa3_invoice in server.py.
 """
 
 from __future__ import annotations

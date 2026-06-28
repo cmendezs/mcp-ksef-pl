@@ -23,7 +23,6 @@ FA(3) structural differences from FA(2) that are implemented here:
 """
 
 import datetime as _dt
-from datetime import date as _date
 from decimal import ROUND_HALF_UP, Decimal
 
 from mcp_einvoicing_core import (
@@ -46,7 +45,7 @@ from .models import (
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
-_SYSTEM_INFO = "mcp-ksef-pl/0.1.0"
+_SYSTEM_INFO = "mcp-ksef-pl/0.4.0"
 
 # Mapping from VAT rate (Decimal) to FA(2) P_13_x / P_14_x field index
 _VAT_RATE_FIELD: dict[str, int] = {
@@ -674,120 +673,3 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
             raise DocumentGenerationError(f"FA(3) generation failed: {exc}") from exc
 
 
-# ---------------------------------------------------------------------------
-# InvoiceDocument → KSeFInvoice conversion (used by server.py tool functions)
-# ---------------------------------------------------------------------------
-
-
-def _doc_to_ksefinvoice(doc: object) -> KSeFInvoice:
-    """Convert an InvoiceDocument to KSeFInvoice, auto-computing EN 16931 totals.
-
-    Called by server.py tool functions. Not intended for direct use.
-    """
-    from mcp_einvoicing_core import InvoiceDocument, InvoiceParty  # noqa: PLC0415
-    from mcp_einvoicing_core.en16931 import (  # noqa: PLC0415
-        EN16931Address,
-        EN16931LineItem,
-        EN16931PaymentMeans,
-    )
-
-    assert isinstance(doc, InvoiceDocument)
-
-    def _convert_party(party: InvoiceParty) -> KSeFParty:
-        name = party.name or f"{party.first_name or ''} {party.last_name or ''}".strip()
-        nip = party.tax_id.identifier if party.tax_id.country_code.upper() == "PL" else None
-        eu_vat = next((t for t in party.alt_tax_ids if t.country_code.upper() != "PL"), None)
-        addr = None
-        if party.address:
-            a = party.address
-            addr = EN16931Address(
-                line_one=a.street or "-",
-                city=a.city or "-",
-                postcode=a.postal_code or "00000",
-                country_code=a.country_code,
-                region=a.province,
-            )
-        return KSeFParty(
-            name=name,
-            address=addr,
-            nip=nip,
-            eu_vat_country=eu_vat.country_code if eu_vat else None,
-            eu_vat_id=eu_vat.identifier if eu_vat else None,
-            gln=party.address.gln if party.address else None,
-        )
-
-    def _uncl5305(code: str | None, rate: Decimal) -> str:
-        if rate > 0:
-            return "S"
-        if not code:
-            return "Z"
-        c = code.upper()
-        if c == "OO":
-            return "AE"
-        if c == "NP":
-            return "O"
-        return "E"  # ZW and others
-
-    line_items = [
-        EN16931LineItem(
-            line_id=str(line.line_number),
-            name=line.description,
-            quantity=line.quantity if line.quantity is not None else Decimal("1"),
-            unit_code=line.unit_of_measure or "C62",
-            unit_price=line.unit_price,
-            line_net_amount=line.total_price,
-            tax_category=_uncl5305(line.vat_exemption_code, line.vat_rate),
-            tax_rate=line.vat_rate,
-        )
-        for line in doc.lines
-    ]
-
-    tax_lines = [
-        EN16931Tax(
-            category=_uncl5305(s.vat_exemption_code, s.vat_rate),
-            rate=s.vat_rate,
-            taxable_amount=s.taxable_base,
-            tax_amount=s.vat_amount,
-        )
-        for s in (doc.vat_summary or [])
-    ]
-
-    payment_means = None
-    due_date = None
-    if doc.payment:
-        p = doc.payment
-        payment_means = EN16931PaymentMeans(
-            type_code=p.payment_method_code or "30",
-            iban=p.iban,
-        )
-        if p.due_date:
-            due_date = _date.fromisoformat(p.due_date)
-
-    sum_of_lines = sum((li.line_net_amount for li in line_items), Decimal("0"))
-    tax_total = sum((t.tax_amount for t in tax_lines), Decimal("0"))
-    tax_excl = (
-        sum((t.taxable_amount for t in tax_lines), Decimal("0"))
-        if tax_lines
-        else sum_of_lines
-    )
-    tax_incl = tax_excl + tax_total
-
-    return KSeFInvoice(
-        profile="KSeF",
-        invoice_number=doc.number,
-        invoice_date=_date.fromisoformat(doc.date),
-        invoice_type_code=doc.document_type,
-        currency_code=doc.currency,
-        seller=_convert_party(doc.seller),
-        buyer=_convert_party(doc.buyer),
-        sum_of_line_net_amounts=sum_of_lines,
-        tax_exclusive_amount=tax_excl,
-        tax_total=tax_total,
-        tax_inclusive_amount=tax_incl,
-        amount_due=tax_incl,
-        tax_lines=tax_lines,
-        line_items=line_items,
-        payment_means=payment_means,
-        due_date=due_date,
-        note=doc.note,
-    )

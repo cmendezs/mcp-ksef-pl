@@ -34,11 +34,13 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 
 ## 🛠️ Dostępne narzędzia
 
-### Obsługa faktur FA(2)
+### Obsługa faktur FA(3) / FA(2)
 
 | Narzędzie | Opis |
 |-----------|------|
-| `generate_fa2_invoice` | Generuje fakturę XML FA(2) zgodną z KSeF na podstawie danych wejściowych |
+| `generate_fa3_invoice` | Generuje fakturę XML FA(3) zgodną z KSeF (wymagany format dla API v2) |
+| `generate_fa2_invoice` | Generuje fakturę XML FA(2) zgodną z KSeF (format archiwalny, tylko do odczytu) |
+| `validate_fa3_invoice` | Waliduje XML FA(3): walidacja XSD i reguły biznesowe specyficzne dla FA(3) |
 | `validate_fa2_invoice` | Waliduje XML FA(2): walidacja XSD (jeśli schemat dostępny) i reguły biznesowe |
 | `parse_fa2_invoice` | Parsuje XML FA(2) do słownika strukturalnego |
 
@@ -46,7 +48,7 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 
 | Narzędzie | Opis |
 |-----------|------|
-| `submit_invoice_to_ksef` | Przesyła fakturę FA(2) do platformy KSeF i zwraca numer referencyjny |
+| `submit_invoice_to_ksef` | Przesyła fakturę FA(3) do platformy KSeF i zwraca numer referencyjny |
 | `get_ksef_invoice_status` | Pobiera status przetwarzania faktury według numeru referencyjnego |
 | `search_ksef_invoices` | Wyszukuje faktury w KSeF według zakresu dat i kierunku (sprzedawca/nabywca) |
 
@@ -102,13 +104,60 @@ uv sync --all-extras
 
 ## 🔐 Uwierzytelnianie w KSeF
 
-KSeF wymaga podpisanego XML (challenge-response) do uzyskania tokenu sesji. Podpisanie
-wymaga kwalifikowanego podpisu elektronicznego lub poświadczeń z portalu MF i nie może
-być zautomatyzowane przez ten serwer MCP. Token sesji należy uzyskać poza serwerem
-i przekazać przez `KSEF_SESSION_TOKEN` lub parametr `session_token` narzędzia
-`submit_invoice_to_ksef`.
+KSeF API v2 wykorzystuje wieloetapowy przepływ challenge/redeem do wydania tokenu AccessToken. Ten serwer MCP przyjmuje już uzyskany token i nie jest w stanie zautomatyzować kroku podpisywania (wymaga kwalifikowanego podpisu elektronicznego).
 
-Dokumentacja techniczna KSeF: https://www.podatki.gov.pl/ksef/dokumentacja-techniczna-ksef/
+### Przepływ krok po kroku
+
+1. **Rejestracja konta.** Zarejestruj się na portalu KSeF: https://ksef.mf.gov.pl/. Wybierz docelowe środowisko (test lub produkcja). Środowisko testowe: `https://ksef-test.mf.gov.pl/`.
+
+2. **Pobranie wyzwania (challenge).** Wywołaj API KSeF, aby uzyskać kopertę XML z wyzwaniem:
+
+   ```bash
+   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthorisationChallenge \
+     -H "Accept: application/json" \
+     -d '{"contextIdentifier": {"type": "onip", "identifier": "TWOJ_NIP"}}' \
+     -H "Content-Type: application/json"
+   ```
+
+   Odpowiedz zawiera ciag `challenge` oraz `timestamp`.
+
+3. **Podpisanie wyzwania.** Zbuduj koperte XML `<InitSessionTokenRequest>` zawierajaca wyzwanie, nastepnie podpisz ja kwalifikowanym podpisem elektronicznym. Akceptowane narzedzia:
+
+   - Dostawcy kwalifikowanych podpisow: KIR (Szafir), Certum, Sigillum
+   - `podpis.gov.pl` (rzadowy portal do podpisywania)
+   - Profil Zaufany: https://www.podatki.gov.pl/ksef/
+
+   Przyklad z `xmlsec1` i certyfikatem PKCS#12:
+
+   ```bash
+   xmlsec1 --sign --pkcs12 twoj-certyfikat.p12 --pwd "haslo" \
+     --output podpisane-wyzwanie.xml szablon-wyzwania.xml
+   ```
+
+4. **Przeslanie podpisanego wyzwania.** Wyslij podpisany XML, aby uzyskac AccessToken:
+
+   ```bash
+   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthoriseXades \
+     -H "Content-Type: application/octet-stream" \
+     --data-binary @podpisane-wyzwanie.xml
+   ```
+
+   Odpowiedz zawiera `sessionToken.token` (AccessToken) oraz `sessionToken.context.referenceNumber`.
+
+5. **Ustawienie tokenu.** Wyeksportuj token dla tego serwera MCP:
+
+   ```bash
+   export KSEF_SESSION_TOKEN="<AccessToken z kroku 4>"
+   ```
+
+   Token jest wazny przez okolo 2 godziny od wydania (zgodnie z dokumentacja MF). Po wygasnieciu powtorz kroki 2-4.
+
+### Zrodla
+
+- Dokumentacja techniczna KSeF: https://www.podatki.gov.pl/ksef/dokumentacja-techniczna-ksef/
+- Specyfikacja uwierzytelniania (CIRFMF): https://github.com/CIRFMF/ksef-docs/blob/main/uwierzytelnianie.md
+- Specyfikacja sesji interaktywnej (CIRFMF): https://github.com/CIRFMF/ksef-docs/blob/main/sesja-interaktywna.md
+- Komunikat o migracji na FA(3): `specs/ksef-v2-fa3-migration-announcement-20250630.pdf`
 
 ---
 

@@ -1,9 +1,9 @@
 """Tests for the FA(2) XML validator."""
 
 import pytest
-from mcp_einvoicing_core import InvoiceDocument
 
 from mcp_ksef_pl.generator import FA2Generator
+from mcp_ksef_pl.models import KSeFInvoice
 from mcp_ksef_pl.validator import FA2Validator
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
@@ -23,7 +23,7 @@ class TestFA2Validator:
 
     @pytest.mark.asyncio
     async def test_valid_xml_passes(
-        self, validator: FA2Validator, generator: FA2Generator, sample_invoice: InvoiceDocument
+        self, validator: FA2Validator, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
         result = await validator.validate(xml)

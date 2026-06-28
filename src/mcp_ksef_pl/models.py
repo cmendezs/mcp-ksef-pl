@@ -1,48 +1,31 @@
 """KSeF-specific Pydantic models for mcp-ksef-pl.
 
-KSeFInvoice subclasses EN16931Invoice rather than InvoiceDocument because Polish
-VAT invoices are semantically EN 16931 compliant: the data model is the same; the
-KSeF XML serialisation format (FA(2)/FA(3)) is a national schema that generators
-map to from this shared base.
+KSeFInvoice subclasses EN16931Invoice because Polish VAT invoices are
+semantically EN 16931 compliant. The KSeF XML formats (FA(2)/FA(3)) are
+national schemas that generators map to from this shared base.
 
-The generators in generator.py currently accept InvoiceDocument for backward
-compatibility.  The intended migration path (PL-5.1, roadmap Q3 2026) is:
-  1. Change tool function signatures (server.py) from InvoiceDocument to KSeFInvoice.
-  2. Migrate generator functions to read EN16931Invoice field names:
-       invoice.number        → invoice.invoice_number
-       invoice.date          → invoice.invoice_date  (date object, not str)
-       invoice.currency      → invoice.currency_code
-       invoice.lines         → invoice.line_items    (list[EN16931LineItem])
-       invoice.vat_summary   → invoice.tax_lines     (list[EN16931Tax])
-       invoice.payment       → invoice.payment_means (EN16931PaymentMeans | None)
-       invoice.payment.due_date → invoice.due_date   (moved to invoice level)
-       line.line_number      → line.line_id           (str, not int)
-       line.description      → line.name
-       line.unit_of_measure  → line.unit_code
-       line.total_price      → line.line_net_amount
-       line.vat_rate         → line.tax_rate
-       s.vat_rate            → s.rate
-       s.taxable_base        → s.taxable_amount
-       s.vat_amount          → s.tax_amount
-       s.vat_exemption_code  → s.category (UNCL5305: E=ZW, AE=OO, O=NP)
-  3. Remove InvoiceDocument and VATSummary imports from generator.py.
-  NOTE: EN16931Invoice has mandatory financial total fields (sum_of_line_net_amounts,
-  tax_exclusive_amount, tax_total, tax_inclusive_amount, amount_due) that are absent
-  from InvoiceDocument.  The tool API must remain on InvoiceDocument until those
-  totals can be auto-computed from line items in a pre-generation step.
+Tool functions in server.py accept KSeFInvoice directly. The from_lines()
+classmethod auto-computes the mandatory EN 16931 financial totals from
+line items and tax lines.
 
 KSeF-specific extensions layered on top of EN 16931:
   - numer_ksef:      post-clearance reference number issued by the KSeF platform
-  - _require_tax_lines relaxed: KSeF supports summary-only (MINIMUM-equivalent)
-    documents that carry only document totals and no line-level VAT breakdown
-
-[NEED: confirm whether KSeF FA(3) mandates tax_lines for all invoice types or
- only for detailed (szczegolowy) invoices — check schemat_FA(3)_v1-0E.xsd.]
+  - _require_tax_lines relaxed: FA(3) XSD declares FaWiersz with minOccurs=0,
+    confirming that line items (and by extension line-level VAT) are optional
+    for advance invoices (zaliczkowa) and certain correction invoices
 """
 
 from __future__ import annotations
 
-from mcp_einvoicing_core.en16931 import EN16931Address, EN16931Invoice, EN16931Party
+from decimal import Decimal
+
+from mcp_einvoicing_core.en16931 import (
+    EN16931Address,
+    EN16931Invoice,
+    EN16931LineItem,
+    EN16931Party,
+    EN16931Tax,
+)
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -69,6 +52,12 @@ class KSeFParty(EN16931Party):
         None, description="EU VAT number for non-PL sellers/buyers"
     )
     gln: str | None = Field(None, description="GS1 Global Location Number")
+
+    @model_validator(mode="after")
+    def _sync_nip_to_vat_id(self) -> KSeFParty:
+        if self.nip and not self.vat_id:
+            self.vat_id = f"PL{self.nip}"
+        return self
 
 
 class KSeFInvoice(EN16931Invoice):
@@ -97,9 +86,37 @@ class KSeFInvoice(EN16931Invoice):
 
     @model_validator(mode="after")
     def _require_tax_lines(self) -> KSeFInvoice:
-        # KSeF supports summary-only documents (no line-level VAT breakdown).
-        # The inherited EN 16931 BR-CO-18 check is intentionally relaxed here.
+        # FA(3) XSD: FaWiersz minOccurs=0; line-level VAT is optional for
+        # advance and certain correction invoices.
         return self
+
+    @classmethod
+    def from_lines(cls, **kwargs: object) -> KSeFInvoice:
+        """Construct a KSeFInvoice, auto-computing financial totals from line_items/tax_lines.
+
+        Callers may omit sum_of_line_net_amounts, tax_exclusive_amount,
+        tax_total, tax_inclusive_amount, and amount_due; they will be
+        derived from the provided line_items and tax_lines.
+        """
+        line_items: list[EN16931LineItem] = kwargs.get("line_items", [])  # type: ignore[assignment]
+        tax_lines: list[EN16931Tax] = kwargs.get("tax_lines", [])  # type: ignore[assignment]
+
+        sum_of_lines = sum((li.line_net_amount for li in line_items), Decimal("0"))
+        tax_total = sum((t.tax_amount for t in tax_lines), Decimal("0"))
+        tax_excl = (
+            sum((t.taxable_amount for t in tax_lines), Decimal("0"))
+            if tax_lines
+            else sum_of_lines
+        )
+        tax_incl = tax_excl + tax_total
+
+        kwargs.setdefault("sum_of_line_net_amounts", sum_of_lines)  # type: ignore[union-attr]
+        kwargs.setdefault("tax_exclusive_amount", tax_excl)  # type: ignore[union-attr]
+        kwargs.setdefault("tax_total", tax_total)  # type: ignore[union-attr]
+        kwargs.setdefault("tax_inclusive_amount", tax_incl)  # type: ignore[union-attr]
+        kwargs.setdefault("amount_due", tax_incl)  # type: ignore[union-attr]
+
+        return cls(**kwargs)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
