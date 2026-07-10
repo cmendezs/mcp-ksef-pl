@@ -392,6 +392,69 @@ def run_check_5() -> CheckResult:
             ),
         ))
 
+    # 5e: validator XSDs must ship inside the wheel (PL-6.3). The FA(2)/FA(3)
+    # validators load their XSDs via a path that resolves in the source tree but
+    # points outside the packaged tree. The wheel is built with
+    # packages = ["src/mcp_ksef_pl"] and no force-include for specs/, so once
+    # installed get_schema_path() returns None and XSD validation is silently
+    # skipped — masking any schema drift in the generators. This check flags the
+    # gap in the source tree by verifying the resolved XSD lives under the package
+    # dir OR that pyproject force-includes it. WARNING (not blocking) so the gate
+    # still passes while the packaging fix is tracked on the roadmap.
+    pkg_src_dir = (Path(__file__).parent.parent / "src" / "mcp_ksef_pl").resolve()
+    pyproject_text = _PYPROJECT.read_text(encoding="utf-8") if _PYPROJECT.exists() else ""
+    force_includes_specs = "force-include" in pyproject_text and "specs" in pyproject_text
+
+    validator_mod, verr = _try_import("mcp_ksef_pl.validator")
+    if validator_mod is None:
+        result.findings.append(CheckFinding(
+            check_id="CHECK_5", tag="[MISSING]", severity=SEVERITY_WARNING,
+            symbol="mcp_ksef_pl.validator",
+            message=f"Could not import validator module for schema-path check: {verr}",
+        ))
+    else:
+        for cls_name in ("FA2Validator", "FA3Validator"):
+            cls = getattr(validator_mod, cls_name, None)
+            if cls is None:
+                continue
+            try:
+                raw_path = cls().get_schema_path()
+            except Exception:  # noqa: BLE001 - defensive: report, do not crash the gate
+                raw_path = None
+            schema_path = Path(raw_path).resolve() if raw_path else None
+            under_package = bool(
+                schema_path and pkg_src_dir in schema_path.parents
+            )
+            if raw_path is None:
+                result.findings.append(CheckFinding(
+                    check_id="CHECK_5", tag="[XSD_UNREACHABLE]", severity=SEVERITY_WARNING,
+                    symbol=f"{cls_name}.get_schema_path",
+                    message=(
+                        f"{cls_name}.get_schema_path() returned None — XSD validation is "
+                        "skipped (PL-6.3). Ship the XSD inside mcp_ksef_pl and load via "
+                        "importlib.resources."
+                    ),
+                ))
+            elif under_package or force_includes_specs:
+                result.findings.append(CheckFinding(
+                    check_id="CHECK_5", tag="[OK]", severity=SEVERITY_OK,
+                    symbol=f"{cls_name}.get_schema_path",
+                    message=f"XSD is packaged and reachable for XSD validation: {raw_path}",
+                ))
+            else:
+                result.findings.append(CheckFinding(
+                    check_id="CHECK_5", tag="[XSD_UNPACKAGED]", severity=SEVERITY_WARNING,
+                    symbol=f"{cls_name}.get_schema_path",
+                    message=(
+                        f"{cls_name} loads its XSD from {raw_path}, which is outside the "
+                        "packaged tree (src/mcp_ksef_pl/) and pyproject has no force-include "
+                        "for specs/. The XSD will not ship in the wheel, so XSD validation "
+                        "is silently skipped once installed (PL-6.3). Move the XSDs under "
+                        "src/mcp_ksef_pl/ and load via importlib.resources, or force-include "
+                        "specs/ in [tool.hatch.build.targets.wheel]."
+                    ),
+                ))
+
     return result
 
 
