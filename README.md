@@ -95,10 +95,11 @@ uv sync --all-extras
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `KSEF_ENVIRONMENT` | `test` | KSeF environment: `production`, `test`, or `demo` |
+| `KSEF_ENVIRONMENT` | `test` | KSeF environment: `production` or `test` |
 | `KSEF_SESSION_TOKEN` | — | KSeF session token (obtained through the challenge-response flow with MF) |
 | `KSEF_NIP` | — | NIP of the entity submitting invoices |
 | `KSEF_TIMEOUT` | `30` | HTTP request timeout in seconds |
+| `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Enforce SPKI SHA-256 pinning on the MF encryption certificate. No-op until fingerprints are populated for the active environment, even when set to `true` |
 
 ---
 

@@ -95,10 +95,11 @@ uv sync --all-extras
 
 | Zmienna | Domyślna | Opis |
 |---------|----------|------|
-| `KSEF_ENVIRONMENT` | `test` | Środowisko KSeF: `production`, `test` lub `demo` |
+| `KSEF_ENVIRONMENT` | `test` | Środowisko KSeF: `production` lub `test` |
 | `KSEF_SESSION_TOKEN` | — | Token sesji KSeF (uzyskiwany przez przepływ challenge-response z MF) |
 | `KSEF_NIP` | — | NIP podmiotu wysyłającego faktury |
 | `KSEF_TIMEOUT` | `30` | Limit czasu żądań HTTP w sekundach |
+| `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Wymusza przypinanie SPKI SHA-256 dla certyfikatu szyfrującego MF. Nieaktywne, dopóki odciski palca nie zostaną skonfigurowane dla danego środowiska, nawet jeśli ustawione na `true` |
 
 ---
 
