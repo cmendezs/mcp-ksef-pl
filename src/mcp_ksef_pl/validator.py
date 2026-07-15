@@ -1,14 +1,16 @@
 """FA(2) and FA(3) XML validators — XSD schema + KSeF business rules.
 
-FA(2): XSD loaded from specs/schemat_FA(2)_v1-0E.xsd (relative to the package root).
-FA(3): XSD loaded from specs/schemat_FA(3)_v1-0E.xsd.
+FA(2): XSD loaded from mcp_ksef_pl/schemas/schemat_FA(2)_v1-0E.xsd via importlib.resources.
+FA(3): XSD loaded from mcp_ksef_pl/schemas/schemat_FA(3)_v1-0E.xsd via importlib.resources.
 
 Both validators require lxml for XSD validation.  Without lxml only the
 structural / business-rule checks run.
 """
 
+import atexit
 import re
-from pathlib import Path
+from contextlib import ExitStack
+from importlib.resources import as_file, files
 
 from mcp_einvoicing_core import (
     BaseDocumentValidator,
@@ -23,8 +25,24 @@ _FA3_NS = "http://crd.gov.pl/wzor/2025/06/25/13775/"
 _FA2_SCHEMA_VERSION = "FA(2) v1-0E"
 _FA3_SCHEMA_VERSION = "FA(3) v1-0E"
 
-# specs/ lives two levels above this file: src/mcp_ksef_pl/ → mcp-ksef-pl/specs/
-_SPECS_DIR = Path(__file__).parent.parent.parent / "specs"
+_SCHEMAS_PACKAGE = "mcp_ksef_pl.schemas"
+
+# Keeps any temp-extracted resource (zip installs) alive for the process
+# lifetime; as_file() is a no-op for normal directory installs.
+_resource_stack = ExitStack()
+atexit.register(_resource_stack.close)
+
+
+def _resolve_schema_path(filename: str) -> str | None:
+    """Resolve a bundled XSD to a real filesystem path via importlib.resources.
+
+    Returns None if the resource is not present (e.g. package tampering).
+    """
+    resource = files(_SCHEMAS_PACKAGE).joinpath(filename)
+    if not resource.is_file():
+        return None
+    real_path = _resource_stack.enter_context(as_file(resource))
+    return str(real_path)
 
 
 def _load_lxml() -> tuple[bool, object]:
@@ -44,7 +62,14 @@ def _xsd_validate(
     warnings: list[str],
     metadata: dict[str, object],
 ) -> None:
-    """Run XSD validation if lxml and the schema file are available."""
+    """Run XSD validation if lxml and the schema file are available.
+
+    On an XSD-invalid document, appends the lxml error messages to *errors*
+    and sets metadata["xsd_validated"] = True (validation ran; the document
+    failed it) — this function never raises XSDValidationError itself, since
+    callers expect a populated DocumentValidationResult(valid=False, ...),
+    not an exception, for a structurally invalid document.
+    """
     has_lxml, etree = _load_lxml()
     if has_lxml and schema_path and etree is not None:
         try:
@@ -52,22 +77,25 @@ def _xsd_validate(
             schema = etree.XMLSchema(xsd_doc)
             doc = safe_fromstring(xml_content.encode())
             if not schema.validate(doc):
-                xsd_errors = [str(e) for e in schema.error_log]
-                raise XSDValidationError(
-                    message=f"{schema_version} XSD validation failed",
+                xsd_error = XSDValidationError(
+                    errors=[str(e) for e in schema.error_log],
                     schema_version=schema_version,
-                    lxml_errors=xsd_errors,
                 )
+                errors.append(str(xsd_error))
             metadata["xsd_validated"] = True
-        except XSDValidationError:
-            raise
         except Exception as exc:
             warnings.append(f"XSD validation skipped due to parse error: {exc}")
             metadata["xsd_validated"] = False
     else:
         reason = (
-            "lxml not installed." if not has_lxml
-            else f"schema file not found at {schema_path!r}."
+            "lxml not installed."
+            if not has_lxml
+            else (
+                f"bundled schema resource missing (resolved path: {schema_path!r}). "
+                "This indicates a packaging regression, not a normal installation "
+                "variant — the XSD ships inside mcp_ksef_pl.schemas and should "
+                "always be resolvable."
+            )
         )
         warnings.append("XSD validation skipped: " + reason)
         metadata["xsd_validated"] = False
@@ -80,8 +108,7 @@ class FA2Validator(BaseDocumentValidator):
         return _FA2_SCHEMA_VERSION
 
     def get_schema_path(self) -> str | None:
-        path = _SPECS_DIR / "schemat_FA(2)_v1-0E.xsd"
-        return str(path) if path.exists() else None
+        return _resolve_schema_path("schemat_FA(2)_v1-0E.xsd")
 
     async def validate(self, xml_content: str) -> DocumentValidationResult:
         errors: list[str] = []
@@ -137,9 +164,16 @@ class FA2Validator(BaseDocumentValidator):
         if "<P_15>" not in xml_content:
             errors.append("Missing gross total <P_15>.")
 
-        # Invoice lines
-        if "<FaWiersze>" not in xml_content:
-            errors.append("Missing invoice lines block <FaWiersze>.")
+        # Invoice lines — FA(2), like FA(3), has no <FaWiersze> wrapper;
+        # <FaWiersz> elements are direct children of <Fa> (verified against
+        # schemat_FA(2)_v1-0E.xsd).
+        if "<FaWiersz>" not in xml_content:
+            errors.append("Missing invoice lines <FaWiersz>.")
+        if "<FaWiersze>" in xml_content:
+            errors.append(
+                "FA(2) must not use a <FaWiersze> wrapper; "
+                "<FaWiersz> elements are direct children of <Fa>."
+            )
 
         return errors
 
@@ -151,8 +185,7 @@ class FA3Validator(BaseDocumentValidator):
         return _FA3_SCHEMA_VERSION
 
     def get_schema_path(self) -> str | None:
-        path = _SPECS_DIR / "schemat_FA(3)_v1-0E.xsd"
-        return str(path) if path.exists() else None
+        return _resolve_schema_path("schemat_FA(3)_v1-0E.xsd")
 
     async def validate(self, xml_content: str) -> DocumentValidationResult:
         errors: list[str] = []

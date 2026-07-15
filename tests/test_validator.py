@@ -1,10 +1,10 @@
-"""Tests for the FA(2) XML validator."""
+"""Tests for the FA(2) and FA(3) XML validators."""
 
 import pytest
 
-from mcp_ksef_pl.generator import FA2Generator
+from mcp_ksef_pl.generator import FA2Generator, FA3Generator
 from mcp_ksef_pl.models import KSeFInvoice
-from mcp_ksef_pl.validator import FA2Validator
+from mcp_ksef_pl.validator import FA2Validator, FA3Validator
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 
@@ -74,3 +74,24 @@ class TestFA2Validator:
         result = await validator.validate(xml)
         assert not result.valid
         assert any("P_1" in e for e in result.errors)
+
+
+class TestFA3ValidatorSchema:
+    @pytest.fixture
+    def validator(self) -> FA3Validator:
+        return FA3Validator()
+
+    @pytest.fixture
+    def generator(self) -> FA3Generator:
+        return FA3Generator()
+
+    def test_get_schema_path_not_none(self, validator: FA3Validator) -> None:
+        assert validator.get_schema_path() is not None
+
+    @pytest.mark.asyncio
+    async def test_xsd_validated_metadata_true_on_valid_sample(
+        self, validator: FA3Validator, generator: FA3Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        result = await validator.validate(xml)
+        assert result.metadata.get("xsd_validated") is True

@@ -224,7 +224,7 @@ async def get_ksef_invoice_status(reference_number: str) -> dict[str, Any]:
 async def search_ksef_invoices(
     date_from: str,
     date_to: str,
-    subject_type: str = "subject1",
+    subject_type: str = "Subject1",
 ) -> list[dict[str, Any]]:
     """Query invoices stored in KSeF for a date range.
 
@@ -232,7 +232,9 @@ async def search_ksef_invoices(
     ----------
     date_from:    Start date in YYYY-MM-DD format.
     date_to:      End date in YYYY-MM-DD format.
-    subject_type: 'subject1' (seller), 'subject2' (buyer), or 'subject3' (third party).
+    subject_type: 'Subject1' (seller), 'Subject2' (buyer), 'Subject3' (third party),
+                  or 'SubjectAuthorized' (authorised representative). Case-insensitive;
+                  normalized to the KSeF v2 PascalCase enum before submission.
     """
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)

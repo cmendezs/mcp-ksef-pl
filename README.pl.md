@@ -239,17 +239,12 @@ Kiro obsługuje serwery MCP przez dedykowany plik konfiguracyjny:
 
 ---
 
-## 📋 Schemat XSD (FA_VAT_v1-0E.xsd)
+## 📋 Schemat XSD
 
-Pełna walidacja XSD wymaga oficjalnego schematu Ministerstwa Finansów.
-Bez niego `validate_fa2_invoice` wykonuje wyłącznie reguły biznesowe.
-
-1. Przejdź na stronę: https://www.podatki.gov.pl/ksef/dokumentacja-techniczna-ksef/
-2. Pobierz pakiet dokumentacji technicznej FA(2)
-3. Umieść plik `FA_VAT_v1-0E.xsd` w katalogu `src/mcp_ksef_pl/schemas/`
-
-Plik jest wykluczony z repozytorium (`.gitignore`), należy go pobrać ręcznie.
-Pomocniczy skrypt: `scripts/download_schemas.sh`
+Oficjalne schematy FA(2) i FA(3) są dołączone do pakietu (`src/mcp_ksef_pl/schemas/`)
+i ładowane automatycznie przez `importlib.resources` — nie jest wymagane ręczne pobieranie
+ani konfiguracja. `validate_fa2_invoice` i `validate_fa3_invoice` od razu wykonują pełną
+walidację XSD dla każdej instalacji.
 
 ---
 

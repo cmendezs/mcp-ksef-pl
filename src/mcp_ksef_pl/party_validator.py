@@ -1,38 +1,18 @@
-import re
-
 from mcp_einvoicing_core import (
     BasePartyValidator,
     DocumentValidationResult,
     TaxIdentifier,
 )
 
-_NIP_WEIGHTS = (6, 5, 7, 2, 3, 4, 5, 6, 7)
-_REGON9_WEIGHTS = (8, 9, 2, 3, 4, 5, 6, 7)
-_REGON14_WEIGHTS = (2, 4, 8, 5, 0, 9, 7, 3, 6, 1, 2, 4, 8)
-
 
 def validate_nip(nip: str) -> bool:
     """Return True when *nip* passes the Polish NIP checksum algorithm."""
-    digits = re.sub(r"[\s\-]", "", nip)
-    if not digits.isdigit() or len(digits) != 10:
-        return False
-    total = sum(int(d) * w for d, w in zip(digits, _NIP_WEIGHTS))
-    remainder = total % 11
-    return remainder != 10 and remainder == int(digits[9])
+    return TaxIdentifier.validate_pl_nip(nip)[0]
 
 
 def validate_regon(regon: str) -> bool:
     """Return True when *regon* passes the 9- or 14-digit Polish REGON checksum."""
-    digits = re.sub(r"\s", "", regon)
-    if not digits.isdigit():
-        return False
-    if len(digits) == 9:
-        total = sum(int(d) * w for d, w in zip(digits, _REGON9_WEIGHTS))
-        return total % 11 % 10 == int(digits[8])
-    if len(digits) == 14:
-        total = sum(int(d) * w for d, w in zip(digits, _REGON14_WEIGHTS))
-        return total % 11 % 10 == int(digits[13])
-    return False
+    return TaxIdentifier.validate_pl_regon(regon)[0]
 
 
 def _extract_nip_and_country(party: object) -> tuple[str, str]:

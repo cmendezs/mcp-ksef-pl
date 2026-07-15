@@ -32,6 +32,11 @@ class KSeFSettings(BaseSettings):
 
     timeout: int = 30
 
+    # PL-3.6: enforce SPKI SHA-256 pinning on the MF SymmetricKeyEncryption
+    # certificate (see security/mf_pinning.py). No-op until pins are populated
+    # for the active environment, even when this is set to True.
+    verify_mf_key_pinning: bool = False
+
     @property
     def base_url(self) -> str:
         return _BASE_URLS[self.environment]

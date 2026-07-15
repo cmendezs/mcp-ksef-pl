@@ -49,6 +49,7 @@ FA(3) generator is implemented as generate_fa3_invoice in server.py.
 
 from __future__ import annotations
 
+import base64
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -63,6 +64,8 @@ from mcp_einvoicing_core.logging_utils import get_logger
 
 from ._encryption import InvoiceEnvelope, load_mf_public_key
 from .config import KSeFSettings
+from .models import SubjectType
+from .security import MFKeyPinningError, verify_mf_spki_pin
 
 logger = get_logger(__name__)
 
@@ -293,6 +296,19 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         # Step 1: fetch the MF public key for symmetric key encryption.
         certs = await self._client.get_public_key_certificates()
         cert_b64 = _pick_encryption_cert(certs)
+
+        # PL-3.6: verify the cert's SPKI fingerprint against the pinned
+        # allowlist before trusting it. No-op unless verify_mf_key_pinning is
+        # enabled AND a pin exists for the active environment.
+        try:
+            verify_mf_spki_pin(
+                base64.b64decode(cert_b64),
+                self._settings.environment.value,
+                enforce=self._settings.verify_mf_key_pinning,
+            )
+        except MFKeyPinningError as exc:
+            raise PlatformError(status_code=502, message=str(exc)) from exc
+
         mf_public_key = load_mf_public_key(cert_b64)
 
         # Step 2: build the per-session envelope (AES key + IV + RSA-wrapped key).
@@ -355,6 +371,8 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         date_to      : str  ISO-8601 datetime or YYYY-MM-DD (defaults to today 23:59Z)
         subject_type : str  "Subject1" (seller) | "Subject2" (buyer) | "Subject3"
                             | "SubjectAuthorized"  (default "Subject1")
+                            Case-insensitive; normalized to the KSeF v2 PascalCase
+                            enum. Raises PlatformError for unrecognised values.
         date_type    : str  "Issue" | "Invoicing" | "PermanentStorage"
                             (default "Invoicing")
         """
@@ -364,7 +382,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         date_to = _to_iso_datetime(
             filters.get("date_to", str(date.today())), end=True
         )
-        subject_type = filters.get("subject_type", "Subject1")
+        subject_type = _normalize_subject_type(filters.get("subject_type", "Subject1"))
         date_type = filters.get("date_type", "Invoicing")
 
         payload: dict[str, Any] = {
@@ -456,6 +474,29 @@ def _raise_ksef_error(status_code: int, body: bytes | str) -> None:
         detail = text or f"HTTP {status_code}"
 
     raise PlatformError(status_code=status_code, message=detail)
+
+
+_SUBJECT_TYPE_LOOKUP: dict[str, SubjectType] = {
+    member.value.lower(): member for member in SubjectType
+}
+
+
+def _normalize_subject_type(value: str) -> str:
+    """Normalize a case-insensitive subjectType input to the KSeF v2 PascalCase enum.
+
+    Raises:
+        PlatformError: If *value* does not match any SubjectType member.
+    """
+    normalized = _SUBJECT_TYPE_LOOKUP.get(value.strip().lower())
+    if normalized is None:
+        raise PlatformError(
+            status_code=400,
+            message=(
+                f"Unrecognised subject_type {value!r}. Expected one of: "
+                f"{', '.join(m.value for m in SubjectType)}."
+            ),
+        )
+    return normalized.value
 
 
 def _to_iso_datetime(value: str, *, end: bool) -> str:

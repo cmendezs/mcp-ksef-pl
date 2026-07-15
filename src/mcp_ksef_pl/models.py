@@ -17,7 +17,9 @@ KSeF-specific extensions layered on top of EN 16931:
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 
 from mcp_einvoicing_core.en16931 import (
     EN16931Address,
@@ -26,7 +28,20 @@ from mcp_einvoicing_core.en16931 import (
     EN16931Party,
     EN16931Tax,
 )
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
+
+
+class SubjectType(StrEnum):
+    """KSeF v2 search subjectType values (invoices/query/metadata subjectType).
+
+    Subject1 = seller, Subject2 = buyer, Subject3 = third party,
+    SubjectAuthorized = authorised representative.
+    """
+
+    SUBJECT1 = "Subject1"
+    SUBJECT2 = "Subject2"
+    SUBJECT3 = "Subject3"
+    SUBJECT_AUTHORIZED = "SubjectAuthorized"
 
 
 class KSeFParty(EN16931Party):
@@ -124,23 +139,42 @@ class KSeFInvoice(EN16931Invoice):
 # ---------------------------------------------------------------------------
 
 
-class KSeFAttachment(BaseModel):
-    """Supporting document attachment for FA(3) <Zalacznik>.
+class KSeFTabela(BaseModel):
+    """Structured table data for a <Zalacznik><BlokDanych><Tabela> entry.
 
-    KSeF imposes a maximum attachment payload size (check ksef-api-v2-openapi.json
-    for the current limit before encoding large files).
+    Stub model — full <Tabela> content (TMetaDane + table rows) is deferred;
+    <Tabela> is uncommon in B2B supplementary-data attachments. Add fields here
+    if a user issue requires table-shaped attachment content.
     """
 
-    filename: str = Field(..., description="Original filename including extension")
-    mime_type: str = Field(..., description="MIME type, e.g. 'application/pdf'")
-    content_base64: str = Field(..., description="Base64-encoded file content")
 
-    @field_validator("content_base64")
-    @classmethod
-    def non_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("content_base64 must not be empty")
-        return v
+class KSeFAttachment(BaseModel):
+    """One <BlokDanych> entry of the FA(3) <Zalacznik> block.
+
+    <Zalacznik> is NOT for binary payloads (PDFs, etc.) — KSeF v2 binary
+    attachments travel outside FA(3) via the API. <Zalacznik> carries
+    structured supplementary invoice data as one or more <BlokDanych> blocks.
+
+    Verified against schemat_FA(3)_v1-0E.xsd <BlokDanych> content model:
+      ZNaglowek — optional, max 512 chars
+      MetaDane  — mandatory, 1..1000 <ZKlucz>/<ZWartosc> key-value pairs
+      Tekst     — optional, up to 10 <Akapit> paragraphs
+      Tabela    — optional, up to 1000 entries (stub; not yet modelled)
+    """
+
+    z_naglowek: str | None = Field(
+        None, max_length=512, description="Optional 512-char BlokDanych header"
+    )
+    metadata: list[tuple[str, str]] = Field(
+        ..., min_length=1, max_length=1000,
+        description="Mandatory (ZKlucz, ZWartosc) key-value pairs, 1..1000 entries",
+    )
+    text_paragraphs: list[str] | None = Field(
+        None, max_length=10, description="Optional <Tekst><Akapit> paragraphs, up to 10"
+    )
+    table: KSeFTabela | None = Field(
+        None, description="Optional structured table data (<Tabela>) — stub, not yet modelled"
+    )
 
 
 class KSeFPodmiot3(BaseModel):
@@ -170,17 +204,52 @@ class KSeFPodmiotUpowazniony(BaseModel):
 
 
 class KSeFCorrectionRef(BaseModel):
-    """Reference to the original invoice being corrected — FA(3) correction block.
+    """Reference to the original invoice being corrected — FA(3) <DaneFaKorygowanej>.
 
-    Exactly one of numer_ksef, numer_ksefn, or numer_ksefzn must be supplied:
-      numer_ksef   — KSeF reference of the accepted original (most common)
-      numer_ksefn  — KSeF reference of a note-corrected original
-      numer_ksefzn — KSeF zero-invoice reference (for full reversal)
+    Verified against schemat_FA(3)_v1-0E.xsd: <DaneFaKorygowanej> requires
+    DataWystFaKorygowanej + NrFaKorygowanej, followed by a choice of either
+    (NrKSeF marker + NrKSeFFaKorygowanej value) for an original cleared through
+    KSeF, or NrKSeFN (a standalone marker, no separate value element) for an
+    original issued outside KSeF / note-corrected.
+
+    Exactly one of the two choice branches must be supplied:
+      numer_ksef + nr_ksef_fa_korygowanej — both set: KSeF reference of the
+        accepted original (most common)
+      numer_ksefn — set alone: marker for a note-corrected / out-of-KSeF original
     """
 
-    numer_ksef: str = Field("", description="KSeF number of the original invoice")
-    numer_ksefn: str = Field("", description="KSeF number (note-corrected original)")
-    numer_ksefzn: str = Field("", description="KSeF zero-invoice reference")
+    data_wyst: date = Field(..., description="Issue date of the corrected invoice")
+    nr_fa_korygowanej: str = Field(..., description="Invoice number of the corrected invoice")
+    numer_ksef: bool = Field(
+        False, description="KSeF marker — set together with nr_ksef_fa_korygowanej"
+    )
+    nr_ksef_fa_korygowanej: str = Field(
+        "", description="KSeF number of the corrected invoice (paired with numer_ksef)"
+    )
+    numer_ksefn: bool = Field(
+        False,
+        description="Marker for a note-corrected / out-of-KSeF original (standalone)",
+    )
+
+    @model_validator(mode="after")
+    def _require_exactly_one_choice_branch(self) -> KSeFCorrectionRef:
+        ksef_branch = self.numer_ksef and bool(self.nr_ksef_fa_korygowanej)
+        ksefn_branch = self.numer_ksefn
+        if self.numer_ksef and not self.nr_ksef_fa_korygowanej:
+            raise ValueError(
+                "numer_ksef=True requires nr_ksef_fa_korygowanej to be set."
+            )
+        if ksef_branch and ksefn_branch:
+            raise ValueError(
+                "KSeFCorrectionRef choice violation: set either "
+                "(numer_ksef + nr_ksef_fa_korygowanej) or numer_ksefn, not both."
+            )
+        if not ksef_branch and not ksefn_branch:
+            raise ValueError(
+                "KSeFCorrectionRef requires either (numer_ksef=True + "
+                "nr_ksef_fa_korygowanej) or numer_ksefn=True."
+            )
+        return self
 
 
 class KSeFFA3Options(BaseModel):

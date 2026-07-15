@@ -66,6 +66,3 @@ tests/fixtures/*.pdf
 
 # Claude Code (local settings, memory, session data)
 .claude/
-
-# XSD schemas — download manually from MF (see scripts/download_schemas.sh)
-src/mcp_ksef_pl/schemas/*.xsd

@@ -1,6 +1,10 @@
 """Tests for the FA(2) and FA(3) XML generators."""
 
+from decimal import Decimal
+
 import pytest
+from mcp_einvoicing_core import DocumentGenerationError
+from mcp_einvoicing_core.en16931 import EN16931Tax
 
 from mcp_ksef_pl.generator import FA2Generator, FA3Generator
 from mcp_ksef_pl.models import KSeFInvoice
@@ -75,9 +79,20 @@ class TestFA2Generator:
         self, generator: FA2Generator, sample_invoice: KSeFInvoice
     ) -> None:
         xml = await generator.generate(sample_invoice)
-        assert "<FaWiersze>" in xml
+        # FA(2) has no <FaWiersze> wrapper either — verified against
+        # schemat_FA(2)_v1-0E.xsd; <FaWiersz> is a direct child of <Fa>.
+        assert "FaWiersze" not in xml
         assert "<FaWiersz>" in xml
         assert "<P_7>Usługi konsultingowe</P_7>" in xml
+
+    @pytest.mark.asyncio
+    async def test_generate_adnotacje_and_rodzaj_faktury(
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<Zwolnienie>" in xml
+        assert "<P_19N>1</P_19N>" in xml
+        assert "<RodzajFaktury>VAT</RodzajFaktury>" in xml
 
     @pytest.mark.asyncio
     async def test_generate_note(
@@ -86,6 +101,26 @@ class TestFA2Generator:
         xml = await generator.generate(sample_invoice)
         assert "<StopkaFaktury>" in xml
         assert "Termin płatności" in xml
+
+    @pytest.mark.asyncio
+    async def test_unknown_vat_rate_raises(
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        for bad_rate in (Decimal("7"), Decimal("22")):
+            invoice = sample_invoice.model_copy(
+                update={
+                    "tax_lines": [
+                        EN16931Tax(
+                            category="S",
+                            rate=bad_rate,
+                            taxable_amount=Decimal("2000.00"),
+                            tax_amount=Decimal("140.00"),
+                        )
+                    ]
+                }
+            )
+            with pytest.raises(DocumentGenerationError, match="Unknown standard-category"):
+                await generator.generate(invoice)
 
 
 class TestFA3Generator:
@@ -217,3 +252,60 @@ class TestFA3Generator:
         invoice_no_note = sample_invoice.model_copy(update={"note": None})
         xml = await generator.generate(invoice_no_note)
         assert "<Stopka>" not in xml
+
+    @pytest.mark.asyncio
+    async def test_unknown_vat_rate_raises(
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        for bad_rate in (Decimal("7"), Decimal("22")):
+            invoice = sample_invoice.model_copy(
+                update={
+                    "tax_lines": [
+                        EN16931Tax(
+                            category="S",
+                            rate=bad_rate,
+                            taxable_amount=Decimal("2000.00"),
+                            tax_amount=Decimal("140.00"),
+                        )
+                    ]
+                }
+            )
+            with pytest.raises(DocumentGenerationError, match="Unknown standard-category"):
+                await generator.generate(invoice)
+
+    @pytest.mark.asyncio
+    async def test_payment_block_forma_platnosci_is_sibling_of_termin_platnosci(
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        from datetime import date
+
+        from mcp_einvoicing_core.en16931 import EN16931PaymentMeans
+
+        invoice = sample_invoice.model_copy(
+            update={
+                "due_date": date(2024, 4, 15),
+                "payment_means": EN16931PaymentMeans(
+                    type_code="58", iban="PL61109010140000071219812874"
+                ),
+            }
+        )
+        xml = await generator.generate(invoice)
+        # FormaPlatnosci must NOT be nested inside TerminPlatnosci (PL-2.7).
+        termin_start = xml.index("<TerminPlatnosci>")
+        termin_end = xml.index("</TerminPlatnosci>")
+        assert "FormaPlatnosci" not in xml[termin_start:termin_end]
+        assert "<FormaPlatnosci>6</FormaPlatnosci>" in xml
+        assert termin_end < xml.index("<FormaPlatnosci>")
+
+    @pytest.mark.asyncio
+    async def test_link_do_platnosci_before_ipksef(
+        self, generator: FA3Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        from mcp_ksef_pl.models import KSeFFA3Options
+
+        options = KSeFFA3Options(
+            ipksef="001AB12345678",
+            link_do_platnosci="https://platnosc.ksef.mf.gov.pl/pay?IPKSeF=001AB12345678",
+        )
+        xml = await generator.generate(sample_invoice, options=options)
+        assert xml.index("<LinkDoPlatnosci>") < xml.index("<IPKSeF>")

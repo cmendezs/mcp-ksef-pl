@@ -3,23 +3,30 @@
 FA(2) — legacy format (KSeF v1)
   Schema namespace: http://crd.gov.pl/wzor/2023/06/29/12648/
   Schema version:   FA (2) / wariant 2
-  XSD reference:    specs/schemat_FA(2)_v1-0E.xsd
+  XSD reference:    src/mcp_ksef_pl/schemas/schemat_FA(2)_v1-0E.xsd
 
 FA(3) — current format required by KSeF API v2
   Schema namespace: http://crd.gov.pl/wzor/2025/06/25/13775/
   Schema version:   FA (3) / wariant 3
-  XSD reference:    specs/schemat_FA(3)_v1-0E.xsd
+  XSD reference:    src/mcp_ksef_pl/schemas/schemat_FA(3)_v1-0E.xsd
 
 FA(3) structural differences from FA(2) that are implemented here:
   - New XML namespace
   - KodFormularza kodSystemowy="FA (3)", WariantFormularza=3
   - DataWytworzeniaFa (corrected spelling; FA(2) generator has typo DataWytworzenieFa)
-  - TAdres uses only KodKraju + AdresL1 + optional AdresL2; no KodPocztowy/Miejscowosc
   - Podmiot2 (buyer) gains two mandatory flags: <JST>2</JST> and <GV>2</GV>
+  - Optional note goes in <Stopka><Informacje><StopkaFaktury>, not inside <Fa>
+
+The following were previously (incorrectly) documented as FA(3)-only additions.
+Verified via lxml against both bundled XSDs: FA(2)'s TAdres, Adnotacje, and Fa
+content models are identical to FA(3)'s on these points, so both generators
+share the same helpers (_adres_block, _adnotacje, _*_wiersz_lines):
+  - TAdres uses only KodKraju + AdresL1 + optional AdresL2 + optional GLN; no
+    KodPocztowy/Miejscowosc/Wojewodztwo in either format
   - Adnotacje includes mandatory sub-elements: Zwolnienie, NoweSrodkiTransportu, PMarzy
   - RodzajFaktury [1..1] is mandatory directly after Adnotacje in <Fa>
-  - FaWiersz items are direct children of <Fa>; no <FaWiersze> wrapper
-  - Optional note goes in <Stopka><Informacje><StopkaFaktury>, not inside <Fa>
+  - FaWiersz items are direct children of <Fa> in both formats; neither uses a
+    <FaWiersze> wrapper
 """
 
 import datetime as _dt
@@ -45,7 +52,7 @@ from .models import (
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
-_SYSTEM_INFO = "mcp-ksef-pl/0.4.0"
+_SYSTEM_INFO = "mcp-ksef-pl/0.5.0"
 
 # Mapping from VAT rate (Decimal) to FA(2) P_13_x / P_14_x field index
 _VAT_RATE_FIELD: dict[str, int] = {
@@ -71,7 +78,13 @@ def _ksef_exempt_code(category: str) -> str | None:
 
 
 def _party_block(party: KSeFParty, tag: str) -> str:
-    """Render a Podmiot1 (seller) or Podmiot2 (buyer) XML block."""
+    """Render a Podmiot1 (seller) or Podmiot2 (buyer) XML block.
+
+    TAdres in the FA(2) XSD (verified via lxml against schemat_FA(2)_v1-0E.xsd)
+    contains only KodKraju, AdresL1, AdresL2, and GLN — the same restricted
+    shape as FA(3)'s TAdres. KodPocztowy/Miejscowosc/Wojewodztwo are not valid
+    FA(2) TAdres members either; use _adres_block for both formats.
+    """
     nip = party.nip or ""
 
     id_block = f"<NIP>{xml_escape(nip)}</NIP>\n" if nip else ""
@@ -80,21 +93,9 @@ def _party_block(party: KSeFParty, tag: str) -> str:
         id_block += f"<NrVatUE>{xml_escape(party.eu_vat_id)}</NrVatUE>\n"
     id_block += f"<Nazwa>{xml_escape(party.name)}</Nazwa>\n"
 
-    addr_block = ""
-    if party.address:
-        a = party.address
-        addr_block = (
-            f"<Adres>\n"
-            f"  <KodKraju>{xml_escape(a.country_code.upper())}</KodKraju>\n"
-            f"  <AdresL1>{xml_escape(a.line_one)}</AdresL1>\n"
-            + (
-                f"  <KodPocztowy>{xml_escape(a.postcode)}</KodPocztowy>\n"
-                if a.postcode else ""
-            )
-            + f"  <Miejscowosc>{xml_escape(a.city)}</Miejscowosc>\n"
-            + (f"  <Wojewodztwo>{xml_escape(a.region)}</Wojewodztwo>\n" if a.region else "")
-            + "</Adres>\n"
-        )
+    addr_block = _adres_block(party)
+    if addr_block:
+        addr_block += "\n"
 
     return (
         f"<{tag}>\n"
@@ -133,43 +134,26 @@ def _vat_summary_fields(summaries: list[EN16931Tax]) -> str:
             fields["P_13_5"] = _d(s.taxable_amount)
             total_gross += s.taxable_amount
         else:
-            # Unknown rate — put in field index 1 (23%) as a fallback
-            fields["P_13_1"] = _d(s.taxable_amount)
-            fields["P_14_1"] = _d(s.tax_amount)
-            total_gross += s.taxable_amount + s.tax_amount
+            raise DocumentGenerationError(
+                f"Unknown standard-category VAT rate {rate_str!r} (category {category!r}); "
+                "expected one of 23, 8, 5, 0."
+            )
 
     fields["P_15"] = _d(total_gross)
 
     return "\n".join(f"<{k}>{v}</{k}>" for k, v in fields.items())
 
 
-def _invoice_lines(invoice: KSeFInvoice) -> str:
-    rows = []
-    for line in invoice.line_items:
-        rate_str = (
-            str(int(line.tax_rate)) if line.tax_rate == int(line.tax_rate)
-            else str(line.tax_rate)
-        )
-        exempt_code = _ksef_exempt_code(line.tax_category)
-        rows.append(
-            f"  <FaWiersz>\n"
-            f"    <NrWierszaFa>{xml_escape(line.line_id)}</NrWierszaFa>\n"
-            f"    <P_7>{xml_escape(line.name)}</P_7>\n"
-            f"    <P_8A>{xml_escape(line.unit_code or 'szt')}</P_8A>\n"
-            f"    <P_8B>{format_amount(line.quantity)}</P_8B>\n"
-            f"    <P_9A>{_d(line.unit_price)}</P_9A>\n"
-            f"    <P_11>{_d(line.line_net_amount)}</P_11>\n"
-            f"    <P_12>{xml_escape(rate_str)}</P_12>\n"
-            + (
-                f"    <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>\n"
-                if exempt_code else ""
-            )
-            + "  </FaWiersz>\n"
-        )
-    return "<FaWiersze>\n" + "".join(rows) + "</FaWiersze>\n"
-
-
 def _payment_block(invoice: KSeFInvoice) -> str:
+    """Return raw payment fields for a payment-bearing invoice.
+
+    KNOWN GAP (uncovered by the PL-6.3 packaging fix, out of scope for this
+    release): <P_6> is not a valid FA(2)/FA(3) element and <RachunekBankowy>
+    must be nested inside a <Platnosc> block (see _fa3_platnosc_block for the
+    FA(3) equivalent). FA2Generator does not call this helper's output into a
+    conformant position; tracked as a follow-up finding since it is not
+    exercised by the current KSeFInvoice fixtures (no due_date/payment_means).
+    """
     if not invoice.payment_means:
         return ""
     pm = invoice.payment_means
@@ -199,40 +183,46 @@ class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
             vat_fields = _vat_summary_fields(invoice.tax_lines or [])
             payment = _payment_block(invoice)
 
-            xml = (
-                f'<?xml version="1.0" encoding="UTF-8"?>\n'
-                f'<Faktura xmlns="{_NS}"\n'
-                f'         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n'
-                f"  <Naglowek>\n"
-                f'    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>\n'
-                f"    <WariantFormularza>2</WariantFormularza>\n"
-                f"    <DataWytworzeniaFa>{now_utc}</DataWytworzeniaFa>\n"
-                f"    <SystemInfo>{xml_escape(_SYSTEM_INFO)}</SystemInfo>\n"
-                f"  </Naglowek>\n"
-                f"  {_party_block(invoice.seller, 'Podmiot1').strip()}\n"
-                f"  {_party_block(invoice.buyer, 'Podmiot2').strip()}\n"
-                f"  <Fa>\n"
-                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>\n"
-                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>\n"
-                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>\n"
-                f"    {vat_fields}\n"
-                f"    {payment}\n"
-                f"    <Adnotacje>\n"
-                f"      <P_16>2</P_16>\n"
-                f"      <P_17>2</P_17>\n"
-                f"      <P_18>2</P_18>\n"
-                f"      <P_18A>2</P_18A>\n"
-                f"      <P_23>2</P_23>\n"
-                f"    </Adnotacje>\n"
-                f"    {_invoice_lines(invoice).strip()}\n"
-                + (
-                    f"    <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>\n"
-                    if invoice.note else ""
-                )
-                + "  </Fa>\n"
-                "</Faktura>\n"
-            )
-            return xml
+            parts: list[str] = [
+                '<?xml version="1.0" encoding="UTF-8"?>',
+                f'<Faktura xmlns="{_NS}"',
+                '         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">',
+                "  <Naglowek>",
+                '    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>',
+                "    <WariantFormularza>2</WariantFormularza>",
+                f"    <DataWytworzeniaFa>{now_utc}</DataWytworzeniaFa>",
+                f"    <SystemInfo>{xml_escape(_SYSTEM_INFO)}</SystemInfo>",
+                "  </Naglowek>",
+                f"  {_party_block(invoice.seller, 'Podmiot1').strip()}",
+                f"  {_party_block(invoice.buyer, 'Podmiot2').strip()}",
+                "  <Fa>",
+                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>",
+                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>",
+                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>",
+            ]
+            if vat_fields:
+                for vl in vat_fields.splitlines():
+                    parts.append(f"    {vl}")
+            if payment:
+                for pl in payment.splitlines():
+                    parts.append(f"    {pl}")
+            for al in _adnotacje().splitlines():
+                parts.append(f"    {al}")
+            parts.append("    <RodzajFaktury>VAT</RodzajFaktury>")
+            if invoice.line_items:
+                for wl in _wiersz_lines(invoice).splitlines():
+                    parts.append(f"    {wl}")
+            parts.append("  </Fa>")
+            if invoice.note:
+                parts += [
+                    "  <Stopka>",
+                    "    <Informacje>",
+                    f"      <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>",
+                    "    </Informacje>",
+                    "  </Stopka>",
+                ]
+            parts.append("</Faktura>")
+            return "\n".join(parts) + "\n"
         except Exception as exc:
             raise DocumentGenerationError(f"FA(2) generation failed: {exc}") from exc
 
@@ -357,16 +347,17 @@ def _fa3_vat_fields(summaries: list[EN16931Tax]) -> tuple[str, str]:
             band_lines.append(f"<P_13_5>{_d(s.taxable_amount)}</P_13_5>")
             total_gross += s.taxable_amount
         else:
-            band_lines.append(f"<P_13_1>{_d(s.taxable_amount)}</P_13_1>")
-            band_lines.append(f"<P_14_1>{_d(s.tax_amount)}</P_14_1>")
-            total_gross += s.taxable_amount + s.tax_amount
+            raise DocumentGenerationError(
+                f"Unknown standard-category VAT rate {rate_str!r} (category {category!r}); "
+                "expected one of 23, 8, 5, 0."
+            )
 
     vat_xml = "\n".join(band_lines)
     p15_xml = f"<P_15>{_d(total_gross)}</P_15>"
     return vat_xml, p15_xml
 
 
-def _fa3_adnotacje() -> str:
+def _adnotacje() -> str:
     """Return the mandatory <Adnotacje> block for a standard VAT invoice.
 
     All annotations default to 'not applicable' (2 / N values):
@@ -395,7 +386,7 @@ def _fa3_adnotacje() -> str:
     )
 
 
-def _fa3_wiersz_lines(invoice: KSeFInvoice) -> str:
+def _wiersz_lines(invoice: KSeFInvoice) -> str:
     """Return repeated <FaWiersz> elements (no wrapper in FA(3))."""
     rows: list[str] = []
     for line in invoice.line_items:
@@ -453,30 +444,58 @@ def _fa3_podmiot_upowazniony_block(pu: KSeFPodmiotUpowazniony) -> str:
     )
 
 
-def _fa3_zalacznik_blocks(attachments: list[KSeFAttachment]) -> str:
-    """Build <Zalacznik> blocks for supporting document attachments."""
-    parts: list[str] = []
-    for att in attachments:
-        parts.append(
-            "<Zalacznik>\n"
-            f"  <Plik>{xml_escape(att.filename)}</Plik>\n"
-            f"  <Mime>{xml_escape(att.mime_type)}</Mime>\n"
-            f"  <Zawartosc>{att.content_base64}</Zawartosc>\n"
-            "</Zalacznik>"
+def _fa3_blok_danych(block: KSeFAttachment) -> str:
+    """Build one <BlokDanych> element (ZNaglowek, MetaDane, Tekst, Tabela)."""
+    lines: list[str] = ["<BlokDanych>"]
+    if block.z_naglowek:
+        lines.append(f"  <ZNaglowek>{xml_escape(block.z_naglowek)}</ZNaglowek>")
+    for key, value in block.metadata:
+        lines.append(
+            f"  <MetaDane>\n"
+            f"    <ZKlucz>{xml_escape(key)}</ZKlucz>\n"
+            f"    <ZWartosc>{xml_escape(value)}</ZWartosc>\n"
+            f"  </MetaDane>"
         )
-    return "\n".join(parts)
+    if block.text_paragraphs:
+        lines.append("  <Tekst>")
+        for paragraph in block.text_paragraphs:
+            lines.append(f"    <Akapit>{xml_escape(paragraph)}</Akapit>")
+        lines.append("  </Tekst>")
+    lines.append("</BlokDanych>")
+    return "\n".join(lines)
+
+
+def _fa3_zalacznik_block(attachments: list[KSeFAttachment]) -> str:
+    """Build a single <Zalacznik> element wrapping N <BlokDanych> children."""
+    lines: list[str] = ["<Zalacznik>"]
+    for block in attachments:
+        for bl in _fa3_blok_danych(block).splitlines():
+            lines.append(f"  {bl}")
+    lines.append("</Zalacznik>")
+    return "\n".join(lines)
 
 
 def _fa3_correction_block(ref: KSeFCorrectionRef) -> str:
-    """Build the correction reference block (NrKSeF / NrKSeFN / NrKSeFZN)."""
-    lines: list[str] = ["<FakturaKorygowana>"]
+    """Build the <DaneFaKorygowanej> correction reference block.
+
+    Verified against schemat_FA(3)_v1-0E.xsd: DataWystFaKorygowanej and
+    NrFaKorygowanej are always emitted, followed by a choice of either
+    (NrKSeF marker + NrKSeFFaKorygowanej value) or NrKSeFN (standalone marker).
+    """
+    lines: list[str] = [
+        "<DaneFaKorygowanej>",
+        f"  <DataWystFaKorygowanej>{xml_escape(str(ref.data_wyst))}</DataWystFaKorygowanej>",
+        f"  <NrFaKorygowanej>{xml_escape(ref.nr_fa_korygowanej)}</NrFaKorygowanej>",
+    ]
     if ref.numer_ksef:
-        lines.append(f"  <NrKSeF>{xml_escape(ref.numer_ksef)}</NrKSeF>")
-    if ref.numer_ksefn:
-        lines.append(f"  <NrKSeFN>{xml_escape(ref.numer_ksefn)}</NrKSeFN>")
-    if ref.numer_ksefzn:
-        lines.append(f"  <NrKSeFZN>{xml_escape(ref.numer_ksefzn)}</NrKSeFZN>")
-    lines.append("</FakturaKorygowana>")
+        lines.append("  <NrKSeF>1</NrKSeF>")
+        lines.append(
+            f"  <NrKSeFFaKorygowanej>{xml_escape(ref.nr_ksef_fa_korygowanej)}"
+            "</NrKSeFFaKorygowanej>"
+        )
+    else:
+        lines.append("  <NrKSeFN>1</NrKSeFN>")
+    lines.append("</DaneFaKorygowanej>")
     return "\n".join(lines)
 
 
@@ -487,6 +506,11 @@ def _fa3_platnosc_block(
 ) -> str:
     """Build an optional <Platnosc> block when IBAN, due_date, or KSeF payment IDs are present.
 
+    XSD <Platnosc> sequence (verified against schemat_FA(3)_v1-0E.xsd):
+      Zaplacono-choice (not emitted here), TerminPlatnosci, FormaPlatnosci-choice,
+      RachunekBankowy, RachunekBankowyFaktora, Skonto, LinkDoPlatnosci, IPKSeF.
+    TerminPlatnosci only contains Termin/TerminOpis — FormaPlatnosci is a sibling
+    element after TerminPlatnosci, not nested inside it.
     FormaPlatnosci=6 (przelew bankowy) is the standard default for B2B invoices.
     ipksef and link_do_platnosci are the KSeF-specific payment identifiers (PL-2.2).
     """
@@ -501,19 +525,19 @@ def _fa3_platnosc_block(
         parts.append(
             f"  <TerminPlatnosci>\n"
             f"    <Termin>{xml_escape(str(invoice.due_date))}</Termin>\n"
-            f"    <FormaPlatnosci>6</FormaPlatnosci>\n"
             f"  </TerminPlatnosci>"
         )
+    parts.append("  <FormaPlatnosci>6</FormaPlatnosci>")
     if has_iban:
         parts.append(
             f"  <RachunekBankowy>\n"
             f"    <NrRB>{xml_escape(pm.iban)}</NrRB>\n"
             f"  </RachunekBankowy>"
         )
-    if ipksef:
-        parts.append(f"  <IPKSeF>{xml_escape(ipksef)}</IPKSeF>")
     if link_do_platnosci:
         parts.append(f"  <LinkDoPlatnosci>{xml_escape(link_do_platnosci)}</LinkDoPlatnosci>")
+    if ipksef:
+        parts.append(f"  <IPKSeF>{xml_escape(ipksef)}</IPKSeF>")
     parts.append("</Platnosc>")
     return "\n".join(parts)
 
@@ -530,7 +554,8 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
     or batch sessions.  FA(2) is not accepted for new submissions.
 
     Schema: http://crd.gov.pl/wzor/2025/06/25/13775/
-    XSD:    specs/schemat_FA(3)_v1-0E.xsd (reference copy; not bundled for validation)
+    XSD:    src/mcp_ksef_pl/schemas/schemat_FA(3)_v1-0E.xsd (bundled in the wheel;
+            loaded via importlib.resources by FA3Validator)
     """
 
     def get_format_name(self) -> str:
@@ -626,7 +651,7 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
             parts.append(f"    {p15_xml}")
 
             # Adnotacje (mandatory, all defaults)
-            for al in _fa3_adnotacje().splitlines():
+            for al in _adnotacje().splitlines():
                 parts.append(f"    {al}")
 
             # RodzajFaktury (mandatory)
@@ -639,18 +664,13 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
 
             # Invoice lines (direct FaWiersz children, no wrapper)
             if invoice.line_items:
-                for wl in _fa3_wiersz_lines(invoice).splitlines():
+                for wl in _wiersz_lines(invoice).splitlines():
                     parts.append(f"    {wl}")
 
             # Payment block (optional)
             if platnosc:
                 for pl in platnosc.splitlines():
                     parts.append(f"    {pl}")
-
-            # PL-2.3: Attachments
-            if opts.attachments:
-                for zl in _fa3_zalacznik_blocks(opts.attachments).splitlines():
-                    parts.append(f"    {zl}")
 
             parts.append("  </Fa>")
 
@@ -663,6 +683,15 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
                     "    </Informacje>",
                     "  </Stopka>",
                 ]
+
+            # PL-2.3: Attachments — <Zalacznik> is the last Faktura-level child,
+            # a sibling of <Fa>/<Stopka> emitted after <Stopka> (confirmed via
+            # lxml parse of schemat_FA(3)_v1-0E.xsd: Faktura sequence is
+            # Naglowek, Podmiot1, Podmiot2, Podmiot3?, PodmiotUpowazniony?, Fa,
+            # Stopka?, Zalacznik?).
+            if opts.attachments:
+                for zl in _fa3_zalacznik_block(opts.attachments).splitlines():
+                    parts.append(f"  {zl}")
 
             parts.append("</Faktura>")
             return "\n".join(parts) + "\n"
