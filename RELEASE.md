@@ -41,6 +41,27 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.5.0] - 2026-07-15
+#### Added
+- MF public-key SPKI SHA-256 pinning (`security/mf_pinning.py`), wired into `submit_document()`; inert by default (empty allowlist)
+
+#### Fixed
+- **[PL-6.3]** FA(2)/FA(3) XSDs (plus transitive `StrukturyDanych`/`ElementarneTypyDanych`/`KodyKrajow` chain) now bundled under `src/mcp_ksef_pl/schemas/`, loaded via `importlib.resources`; XSD validation runs for every installed user
+- **[PL-PEP-1]** removed ad-hoc Peppol `<cbc:ProfileID>` overrides; consumes core `business_process` directly
+- **[PL-3.5]** `subjectType` default normalized to PascalCase
+- **[PL-2.7]** `Platnosc` element order/nesting corrected
+- **[PL-2.8]** unknown VAT rate now raises `DocumentGenerationError` instead of silently defaulting to 23%
+- **[PL-5.2]** NIP/REGON validation delegates to core `TaxIdentifier`
+- FA(2) generator brought into full schema conformance (collateral fix, surfaced by PL-6.3)
+- Pre-existing `XSDValidationError` constructor bug and validate-vs-raise mismatch in `_xsd_validate()`
+
+#### Changed (breaking)
+- **[PL-4.2]** correction block rewritten as `DaneFaKorygowanej`; `KSeFCorrectionRef` field shape changed
+- **[PL-2.6]** `Zalacznik`/`BlokDanych` re-placed at correct XSD position; `KSeFAttachment` field shape changed
+
+#### Known gaps
+- **[PL-PAY-1]** `FA2Generator._payment_block` still emits an invalid `<P_6>`/unwrapped `RachunekBankowy`; deferred to a follow-up release
+
 ### [0.4.0] - 2026-06-28
 #### Added
 - `KSeFInvoice.from_lines()` classmethod: auto-computes totals from line items and tax lines
