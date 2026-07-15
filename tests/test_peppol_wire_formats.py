@@ -121,6 +121,23 @@ class TestKSeFPeppolUBLSerializer:
         profile_pos = xml.index(_PROFILE_ID)
         assert profile_pos > cust_pos
 
+    def test_profile_id_emitted_exactly_once(
+        self, serializer: KSeFPeppolUBLSerializer, peppol_invoice: KSeFInvoice
+    ) -> None:
+        """PL-PEP-1 regression guard: after removing the ad-hoc ProfileID
+        injection overrides in favour of core's business_process-driven
+        emission (core v1.15.0), the element must not be double-emitted."""
+        xml = serializer.serialize(peppol_invoice).decode()
+        assert xml.count("<cbc:ProfileID>") == 1
+
+    def test_business_process_respected_when_caller_sets_it(
+        self, serializer: KSeFPeppolUBLSerializer, peppol_invoice: KSeFInvoice
+    ) -> None:
+        peppol_invoice.business_process = "urn:peppol:pint:billing-1"
+        xml = serializer.serialize(peppol_invoice).decode()
+        assert xml.count("<cbc:ProfileID>") == 1
+        assert "urn:peppol:pint:billing-1" in xml
+
     def test_nip_mapped_to_pl_prefix(
         self, serializer: KSeFPeppolUBLSerializer, peppol_invoice: KSeFInvoice
     ) -> None:

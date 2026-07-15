@@ -27,6 +27,15 @@ class TestPeppolUBLGenerator:
         assert _PROFILE in xml
 
     @pytest.mark.asyncio
+    async def test_generate_profile_id_emitted_exactly_once(
+        self, generator: PeppolUBLGenerator, sample_invoice: KSeFInvoice
+    ) -> None:
+        """PL-PEP-1 regression guard: business_process-driven core emission
+        (v1.15.0) replaces the removed ad-hoc XML-injection override."""
+        xml = await generator.generate(sample_invoice)
+        assert xml.count("<cbc:ProfileID>") == 1
+
+    @pytest.mark.asyncio
     async def test_generate_invoice_id_and_date(
         self, generator: PeppolUBLGenerator, sample_invoice: KSeFInvoice
     ) -> None:

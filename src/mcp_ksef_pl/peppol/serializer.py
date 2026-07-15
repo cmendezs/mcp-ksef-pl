@@ -5,15 +5,20 @@ Peppol BIS 3.0 cross-border profile only; KSeF FA(2)/FA(3) serialization
 remains in generator.py.
 
 Key overrides vs the core base:
-- _build_root: injects ProfileID after CustomizationID (Peppol requirement)
 - _build_party: resolves KSeFParty.nip → PL{nip} CompanyID and guards
   against Optional address (cross-border parties without a PL postal address)
+
+ProfileID (BT-23) emission is delegated to the core serializer via
+EN16931Invoice.business_process (core v1.15.0, PL-PEP-1) — no local XML
+injection override needed. ``serialize()`` sets ``business_process`` when the
+caller has not already set it, to preserve this class's prior auto-inject
+behaviour.
 """
 
 from __future__ import annotations
 
 from lxml import etree
-from mcp_einvoicing_core.en16931 import EN16931Address, EN16931Invoice, EN16931Party
+from mcp_einvoicing_core.en16931 import EN16931Address, EN16931Party
 from mcp_einvoicing_core.wire_formats import EN16931UBLSerializer
 
 from mcp_ksef_pl.models import KSeFInvoice, KSeFParty
@@ -22,8 +27,6 @@ _PEPPOL_CUSTOMIZATION_ID = (
     "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
 )
 _PEPPOL_PROFILE_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
-
-_CBC = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
 
 
 def _resolve_vat_id(party: KSeFParty) -> str | None:
@@ -49,17 +52,10 @@ class KSeFPeppolUBLSerializer(EN16931UBLSerializer):
     """
 
     def serialize(self, invoice: KSeFInvoice) -> bytes:
+        if not invoice.business_process:
+            invoice.business_process = _PEPPOL_PROFILE_ID
         root = self._build_root(invoice)
         return self._to_bytes(root)
-
-    def _build_root(self, invoice: EN16931Invoice) -> etree._Element:
-        root = super()._build_root(invoice)
-        cust_id = root.find(f"{{{_CBC}}}CustomizationID")
-        if cust_id is not None:
-            profile_el = etree.Element(f"{{{_CBC}}}ProfileID")
-            profile_el.text = _PEPPOL_PROFILE_ID
-            cust_id.addnext(profile_el)
-        return root
 
     def _build_party(self, parent: etree._Element, wrapper: str, party: EN16931Party) -> None:
         if not isinstance(party, KSeFParty):
