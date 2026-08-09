@@ -54,15 +54,34 @@ _PRIMARY_INVOICE_CLASS: tuple[str, str] = ("mcp_ksef_pl.models", "KSeFInvoice")
 
 _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # KSeF uses standalone FastMCP; base ABC classes are not subclassed directly.
+    # TaxIdValidationResult is a cross-module re-export of core.models.TaxIdValidationResult
+    # (PL's own NIP/REGON checks in party_validator.py return their own result type).
+    # scrub() (LLM-facing IBAN/BIC redaction) is not yet wired into any PL tool
+    # handler — same gap as every other country package in this workspace.
+    # ABC/Any/BaseModel/FastMCP/Field/Generic/TypeVar/abstractmethod are
+    # stdlib/Pydantic/FastMCP imports used internally by base_server.py itself.
     "mcp_einvoicing_core.base_server": {
         "BaseDocumentGenerator",
         "BaseDocumentParser",
         "BaseDocumentValidator",
         "BasePartyValidator",
         "EInvoicingMCPServer",
+        "TaxIdValidationResult",
+        "scrub",
+        "ABC",
+        "Any",
+        "BaseModel",
+        "FastMCP",
+        "Field",
+        "Generic",
+        "TypeVar",
+        "abstractmethod",
     },
     # XAdES signing is ES-specific. KSeF uses AES-256-CBC + RSA-OAEP at the
     # transport layer (handled in _encryption.py), not document-level signing.
+    # CAdES (PKCS#7) is an IT/FR-specific signature wrapper, also not used by KSeF.
+    # ABC/abstractmethod/dataclass/datetime/field/timezone are stdlib imports
+    # used internally by digital_signature.py itself.
     "mcp_einvoicing_core.digital_signature": {
         "BaseDocumentSigner",
         "XAdESEPESSigner",
@@ -72,57 +91,166 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         # KSeF FA(3)/FA(2), which use XAdES-EPES / Peppol BIS 3.0 signing
         "XMLDSigSigner",
         "XMLDSigSignerConfig",
+        # OVERRIDE-REASON: CAdESSigner/CAdESSignerConfig is the CMS/PKCS#7
+        # attached signature (CAdES-BES) used for IT FatturaPA .xml.p7m and
+        # FR Chorus Pro; KSeF applies no such wrapper signature.
+        "CAdESSigner",
+        "CAdESSignerConfig",
+        "ABC",
+        "abstractmethod",
+        "dataclass",
+        "datetime",
+        "field",
+        "timezone",
     },
     # EN16931 classes are used via KSeFInvoice(EN16931Invoice) and KSeFParty(EN16931Party).
     # The specific sub-classes (EN16931LineItem, EN16931PaymentMeans) are accessed through
     # the EN16931Invoice base; the generators migrate to these field names incrementally.
+    # BaseModel/Decimal/Field/date/field_validator/model_validator are
+    # stdlib/Pydantic imports used internally by en16931.py itself.
     "mcp_einvoicing_core.en16931": {
         "EN16931Address",
         "EN16931AllowanceCharge",
         "EN16931LineItem",
         "EN16931PaymentMeans",
         "EN16931Tax",
+        "BaseModel",
+        "Decimal",
+        "Field",
+        "date",
+        "field_validator",
+        "model_validator",
     },
     # PL uses PlatformError and DocumentGenerationError; the others are not raised.
     "mcp_einvoicing_core.exceptions": {
         "AuthenticationError",
         "PartyValidationError",
         "SchematronValidationError",
+        "EInvoicingError",
     },
     # KSeF uses BEARER_TOKEN session auth; OAuth2 client_credentials is not used.
+    # AuthenticationError is a cross-module re-export of exceptions.AuthenticationError,
+    # already excluded above for the same reason. BaseEInvoicingConfig is unused —
+    # PL's own config.py (KSeFSettings) defines its BaseSettings config directly.
+    # Any/BaseModel/BaseSettings/Enum/Field/Path/field_validator/
+    # parsedate_to_datetime/urlparse are stdlib/Pydantic imports used internally
+    # by http_client.py itself.
     "mcp_einvoicing_core.http_client": {
         "OAuthConfig",
         "TokenCache",
+        "OAuthValues",
+        "AuthenticationError",
+        "BaseEInvoicingConfig",
+        "Any",
+        "BaseModel",
+        "BaseSettings",
+        "Enum",
+        "Field",
+        "Path",
+        "field_validator",
+        "parsedate_to_datetime",
+        "urlparse",
     },
     # PaymentTerms — not used in FA(2)/FA(3) invoice structure.
+    # TaxIdValidationResult is unused here too (see base_server above).
+    # BaseModel/Decimal/Field/field_validator/model_validator are stdlib/Pydantic
+    # imports used internally by models.py itself.
     "mcp_einvoicing_core.models": {
         "PaymentTerms",
+        "TaxIdValidationResult",
+        "BaseModel",
+        "Decimal",
+        "Field",
+        "field_validator",
+        "model_validator",
     },
     # PDF/A-3 embedding is not required for KSeF XML invoices.
     "mcp_einvoicing_core.pdf": {
         "PDFEmbedder",
     },
+    # Peppol BIS 3.0 UBL generation/parsing (peppol/generator.py, peppol/parser.py,
+    # peppol/serializer.py) is implemented directly on top of core's
+    # EN16931UBLSerializer/EN16931UBLParser (wire_formats). PL does not perform
+    # live Peppol network directory lookups, so the SMP participant-lookup client
+    # and its supporting types are unused. Enum/dataclass/field are stdlib
+    # imports used internally by peppol.py itself.
+    "mcp_einvoicing_core.peppol": {
+        "PeppolEnvironment",
+        "PeppolLookupResult",
+        "PeppolParticipantId",
+        "PeppolSMPClient",
+        "PeppolServiceInfo",
+        "Enum",
+        "dataclass",
+        "field",
+    },
     # QR codes are not required by the KSeF specification.
     "mcp_einvoicing_core.qr": {
         "generate_qr_png_base64",
     },
+    # Profile registry not used; KSeF uses fixed FA(2)/FA(3) XSD namespaces and
+    # hardcoded Peppol BIS 3.0 customization/profile ID constants
+    # (see peppol/generator.py). dataclass is a stdlib import used internally
+    # by profile_registry.py itself.
+    "mcp_einvoicing_core.profile_registry": {
+        "ProfileEntry",
+        "ProfileRegistry",
+        "set_profile_registry",
+        "dataclass",
+    },
     # KSeF uses XSD + business-rule validation, not Schematron/SVRL.
+    # BaseXSDValidator/BaseJSONValidator are available but FA2Validator/FA3Validator
+    # extend BaseDocumentValidator directly with their own lxml-based XSD check.
+    # get_xslt_version and load_schematron_validator are Schematron/SVRL-only
+    # helpers, also unused. ABC/Path/abstractmethod/dataclass/field are stdlib
+    # imports used internally by schematron.py itself.
     "mcp_einvoicing_core.schematron": {
         "BaseStructuredValidator",
         "SchematronValidator",
         "ValidationMessage",
         "ValidationResult",
+        "BaseXSDValidator",
+        "BaseJSONValidator",
+        "SaxonSchematronValidator",
+        "get_xslt_version",
+        "load_schematron_validator",
+        "ABC",
+        "Path",
+        "abstractmethod",
+        "dataclass",
+        "field",
     },
     # KSeF artefacts are not managed through the download_rules framework.
+    # Path/dataclass/entry_points/field are stdlib imports used internally by
+    # download_rules.py; main is its CLI entrypoint, not part of the
+    # importable surface.
     "mcp_einvoicing_core.download_rules": {
         "DownloadSpec",
         "download_artefacts",
+        "Path",
+        "dataclass",
+        "entry_points",
+        "field",
+        "main",
     },
     # xml_element/xml_optional/validate_iban: not used in KSeF XML generation.
+    # filter_empty_values/format_error/format_quantity/mark_untrusted/
+    # mark_untrusted_fields/resolve_xml_input/validate_date_iso are also unused —
+    # PL parses/serializes via safe_fromstring/safe_parser only. Any/Decimal are
+    # stdlib/typing imports used internally by xml_utils.py itself.
     "mcp_einvoicing_core.xml_utils": {
         "validate_iban",
         "xml_element",
         "xml_optional",
+        "filter_empty_values",
+        "format_error",
+        "format_quantity",
+        "mark_untrusted",
+        "mark_untrusted_fields",
+        "resolve_xml_input",
+        "validate_date_iso",
+        "Any",
+        "Decimal",
     },
 }
 
@@ -133,10 +261,13 @@ _PKG_MODULES: list[str] = [
     "mcp_ksef_pl.validator",
     "mcp_ksef_pl.parser",
     "mcp_ksef_pl.lifecycle",
+    "mcp_ksef_pl.models",
     "mcp_ksef_pl.party_validator",
+    "mcp_ksef_pl.server",
     "mcp_ksef_pl.peppol",
     "mcp_ksef_pl.peppol.generator",
-    "mcp_ksef_pl.security.mf_pinning",
+    "mcp_ksef_pl.peppol.parser",
+    "mcp_ksef_pl.peppol.serializer",
 ]
 
 _PYPROJECT = Path(__file__).parent.parent / "pyproject.toml"
