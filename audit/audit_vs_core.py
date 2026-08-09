@@ -72,6 +72,10 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         # KSeF FA(3)/FA(2), which use XAdES-EPES / Peppol BIS 3.0 signing
         "XMLDSigSigner",
         "XMLDSigSignerConfig",
+        # OVERRIDE-REASON: load_certificate_der (core v1.16.0) is a helper for
+        # country packages building custom auth claims from a cert's public
+        # bytes (e.g. ES FACe's JWS "username" claim); PL has no such flow.
+        "load_certificate_der",
     },
     # EN16931 classes are used via KSeFInvoice(EN16931Invoice) and KSeFParty(EN16931Party).
     # The specific sub-classes (EN16931LineItem, EN16931PaymentMeans) are accessed through
@@ -93,6 +97,9 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     "mcp_einvoicing_core.http_client": {
         "OAuthConfig",
         "TokenCache",
+        # OVERRIDE-REASON: JWSConfig (core v1.16.0) configures RS256/x5c JWT
+        # auth for platforms like ES FACe; KSeF uses bearer-token session auth.
+        "JWSConfig",
     },
     # PaymentTerms — not used in FA(2)/FA(3) invoice structure.
     "mcp_einvoicing_core.models": {
