@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-09T07:41:33.339058+00:00",
+  "generated_at": "2026-08-09T08:47:35.130649+00:00",
   "pkg_name": "mcp-ksef-pl",
   "pkg_version": "0.5.0",
   "core_version": "1.15.0",
   "core_version_compatible": true,
-  "exit_code": 1,
+  "exit_code": 0,
   "total_blocking": 0,
-  "total_warnings": 79,
+  "total_warnings": 0,
   "checks": [
     {
       "check_id": "CHECK_1",
@@ -15,21 +15,21 @@
       "skipped": false,
       "skip_reason": "",
       "blocking_count": 0,
-      "warning_count": 79,
+      "warning_count": 0,
       "findings": [
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.ABC",
-          "message": "Core symbol 'ABC' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.Any",
-          "message": "Core symbol 'Any' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -61,10 +61,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.BaseModel",
-          "message": "Core symbol 'BaseModel' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -89,24 +89,24 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.FastMCP",
-          "message": "Core symbol 'FastMCP' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.Field",
-          "message": "Core symbol 'Field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.Generic",
-          "message": "Core symbol 'Generic' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -131,24 +131,24 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.TaxIdValidationResult",
-          "message": "Core symbol 'TaxIdValidationResult' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.TypeVar",
-          "message": "Core symbol 'TypeVar' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.abstractmethod",
-          "message": "Core symbol 'abstractmethod' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -159,17 +159,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.scrub",
-          "message": "Core symbol 'scrub' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.ABC",
-          "message": "Core symbol 'ABC' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -180,17 +180,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.CAdESSigner",
-          "message": "Core symbol 'CAdESSigner' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.CAdESSignerConfig",
-          "message": "Core symbol 'CAdESSignerConfig' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -222,31 +222,31 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.abstractmethod",
-          "message": "Core symbol 'abstractmethod' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.dataclass",
-          "message": "Core symbol 'dataclass' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.datetime",
-          "message": "Core symbol 'datetime' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.field",
-          "message": "Core symbol 'field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -257,10 +257,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.timezone",
-          "message": "Core symbol 'timezone' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -271,17 +271,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.download_rules.Path",
-          "message": "Core symbol 'Path' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.download_rules.dataclass",
-          "message": "Core symbol 'dataclass' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -292,38 +292,38 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.download_rules.entry_points",
-          "message": "Core symbol 'entry_points' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.download_rules.field",
-          "message": "Core symbol 'field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.download_rules.main",
-          "message": "Core symbol 'main' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.BaseModel",
-          "message": "Core symbol 'BaseModel' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.Decimal",
-          "message": "Core symbol 'Decimal' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -376,31 +376,31 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.Field",
-          "message": "Core symbol 'Field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.date",
-          "message": "Core symbol 'date' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.field_validator",
-          "message": "Core symbol 'field_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.en16931.model_validator",
-          "message": "Core symbol 'model_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -418,10 +418,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.exceptions.EInvoicingError",
-          "message": "Core symbol 'EInvoicingError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -460,10 +460,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.Any",
-          "message": "Core symbol 'Any' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -474,10 +474,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.AuthenticationError",
-          "message": "Core symbol 'AuthenticationError' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -488,38 +488,38 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.BaseEInvoicingConfig",
-          "message": "Core symbol 'BaseEInvoicingConfig' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.BaseModel",
-          "message": "Core symbol 'BaseModel' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.BaseSettings",
-          "message": "Core symbol 'BaseSettings' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.Enum",
-          "message": "Core symbol 'Enum' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.Field",
-          "message": "Core symbol 'Field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -530,17 +530,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.OAuthValues",
-          "message": "Core symbol 'OAuthValues' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.Path",
-          "message": "Core symbol 'Path' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -558,38 +558,38 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.field_validator",
-          "message": "Core symbol 'field_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.parsedate_to_datetime",
-          "message": "Core symbol 'parsedate_to_datetime' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.urlparse",
-          "message": "Core symbol 'urlparse' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.BaseModel",
-          "message": "Core symbol 'BaseModel' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.Decimal",
-          "message": "Core symbol 'Decimal' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -600,10 +600,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.Field",
-          "message": "Core symbol 'Field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -642,10 +642,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.TaxIdValidationResult",
-          "message": "Core symbol 'TaxIdValidationResult' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -663,17 +663,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.field_validator",
-          "message": "Core symbol 'field_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.models.model_validator",
-          "message": "Core symbol 'model_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -684,45 +684,45 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.Enum",
-          "message": "Core symbol 'Enum' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PeppolEnvironment",
-          "message": "Core symbol 'PeppolEnvironment' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PeppolLookupResult",
-          "message": "Core symbol 'PeppolLookupResult' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PeppolParticipantId",
-          "message": "Core symbol 'PeppolParticipantId' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PeppolSMPClient",
-          "message": "Core symbol 'PeppolSMPClient' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PeppolServiceInfo",
-          "message": "Core symbol 'PeppolServiceInfo' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -733,17 +733,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.dataclass",
-          "message": "Core symbol 'dataclass' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.field",
-          "message": "Core symbol 'field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -754,31 +754,31 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.profile_registry.ProfileEntry",
-          "message": "Core symbol 'ProfileEntry' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.profile_registry.ProfileRegistry",
-          "message": "Core symbol 'ProfileRegistry' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.profile_registry.dataclass",
-          "message": "Core symbol 'dataclass' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.profile_registry.set_profile_registry",
-          "message": "Core symbol 'set_profile_registry' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -789,17 +789,17 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.ABC",
-          "message": "Core symbol 'ABC' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.BaseJSONValidator",
-          "message": "Core symbol 'BaseJSONValidator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -810,24 +810,24 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.BaseXSDValidator",
-          "message": "Core symbol 'BaseXSDValidator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.Path",
-          "message": "Core symbol 'Path' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.SaxonSchematronValidator",
-          "message": "Core symbol 'SaxonSchematronValidator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -852,38 +852,38 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.abstractmethod",
-          "message": "Core symbol 'abstractmethod' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.dataclass",
-          "message": "Core symbol 'dataclass' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.field",
-          "message": "Core symbol 'field' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.get_xslt_version",
-          "message": "Core symbol 'get_xslt_version' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.load_schematron_validator",
-          "message": "Core symbol 'load_schematron_validator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -901,24 +901,24 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.Any",
-          "message": "Core symbol 'Any' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.Decimal",
-          "message": "Core symbol 'Decimal' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.filter_empty_values",
-          "message": "Core symbol 'filter_empty_values' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -929,38 +929,38 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.format_error",
-          "message": "Core symbol 'format_error' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.format_quantity",
-          "message": "Core symbol 'format_quantity' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.mark_untrusted",
-          "message": "Core symbol 'mark_untrusted' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.mark_untrusted_fields",
-          "message": "Core symbol 'mark_untrusted_fields' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.resolve_xml_input",
-          "message": "Core symbol 'resolve_xml_input' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -978,10 +978,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[MISSING]",
-          "severity": "WARNING",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.validate_date_iso",
-          "message": "Core symbol 'validate_date_iso' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
