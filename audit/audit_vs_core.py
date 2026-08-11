@@ -148,6 +148,11 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         # OVERRIDE-REASON: JWSConfig (core v1.16.0) configures RS256/x5c JWT
         # auth for platforms like ES FACe; KSeF uses bearer-token session auth.
         "JWSConfig",
+        # OVERRIDE-REASON: compute_retry_delay (core v1.16.2) is already called
+        # internally by BaseEInvoicingClient's own retry loop; PL uses
+        # BaseEInvoicingClient directly and has no separate retry implementation
+        # that would need to call this helper itself.
+        "compute_retry_delay",
         "Any",
         "BaseModel",
         "BaseSettings",
