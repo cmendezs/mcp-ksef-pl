@@ -1,6 +1,9 @@
 # mcp-ksef-pl — Specification assets
 
-Reference files for KSeF FA(2) / FA(3) and KSeF API v2.
+Reference files for KSeF FA(2) / FA(3) and KSeF API v2 (reconciled against the
+CIRFMF `api-changelog.md` through production release v2.1.1, 2026-02-13 — see
+GitHub issue #7). The v2.0.1-2.1.1 delta is auth/permissions-only and does not
+affect any endpoint or contract this package implements.
 All files sourced from the official CIRFMF ksef-docs repository
 (`https://github.com/CIRFMF/ksef-docs`).
 

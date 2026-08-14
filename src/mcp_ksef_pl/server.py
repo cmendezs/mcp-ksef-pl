@@ -32,7 +32,8 @@ mcp = FastMCP(
     name="mcp-ksef-pl",
     instructions=(
         "MCP server for Polish electronic invoicing.\n"
-        "Supports KSeF FA(2) (legacy, read-only), FA(3) (mandatory for KSeF API v2 submissions), "
+        "Supports KSeF FA(2) (legacy, read-only), FA(3) (mandatory for KSeF API v2 submissions, "
+        "reconciled against the production API through v2.1.1), "
         "and Peppol BIS 3.0 / EN 16931 UBL.\n"
         "Standard KSeF workflow: generate_fa3_invoice"
         " → validate_fa3_invoice → submit_invoice_to_ksef.\n"

@@ -29,9 +29,10 @@ KSeF API v2 submission flow
 Authentication note
 -------------------
 KSeF v2 uses a multi-step challenge/redeem flow to issue an AccessToken:
-  1. GET /api/online/Session/AuthorisationChallenge (obtain challenge + timestamp)
+  1. POST /auth/challenge (obtain challenge + timestamp)
   2. Build <InitSessionTokenRequest> XML, sign with qualified e-signature (PKCS#12)
-  3. POST /api/online/Session/AuthoriseXades (submit signed XML, receive AccessToken)
+  3. POST /auth/xades-signature (submit signed XML, receive an authOperation reference)
+  4. POST /auth/token/redeem (exchange the authenticated operation for an AccessToken)
   Token validity: approximately 2 hours from issuance.
 
 This module accepts an already-obtained AccessToken (passed as KSEF_SESSION_TOKEN
