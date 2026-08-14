@@ -114,7 +114,7 @@ KSeF API v2 uses a multi-step challenge/redeem flow to issue an AccessToken. Thi
 2. **Request a challenge.** Call the KSeF API to obtain a challenge XML envelope:
 
    ```bash
-   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthorisationChallenge \
+   curl -s https://ksef-test.mf.gov.pl/auth/challenge \
      -H "Accept: application/json" \
      -d '{"contextIdentifier": {"type": "onip", "identifier": "YOUR_NIP"}}' \
      -H "Content-Type: application/json"
@@ -136,23 +136,31 @@ KSeF API v2 uses a multi-step challenge/redeem flow to issue an AccessToken. Thi
      --output signed-challenge.xml challenge-template.xml
    ```
 
-4. **Submit the signed challenge.** POST the signed XML to obtain an AccessToken:
+4. **Submit the signed challenge.** POST the signed XML to receive an `authOperation` reference:
 
    ```bash
-   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthoriseXades \
+   curl -s https://ksef-test.mf.gov.pl/auth/xades-signature \
      -H "Content-Type: application/octet-stream" \
      --data-binary @signed-challenge.xml
    ```
 
-   The response contains `sessionToken.token` (the AccessToken) and `sessionToken.context.referenceNumber`.
-
-5. **Set the token.** Export the token for this MCP server:
+5. **Redeem the AccessToken.** Exchange the authenticated operation for an AccessToken:
 
    ```bash
-   export KSEF_SESSION_TOKEN="<the AccessToken from step 4>"
+   curl -s https://ksef-test.mf.gov.pl/auth/token/redeem \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <referenceNumber-or-authOperation-token-from-step-4>"
    ```
 
-   The token is valid for approximately 2 hours from issuance (per MF documentation). After expiry, repeat steps 2-4.
+   The response contains `accessToken.token` and `accessToken.context.referenceNumber`.
+
+6. **Set the token.** Export the token for this MCP server:
+
+   ```bash
+   export KSEF_SESSION_TOKEN="<the AccessToken from step 5>"
+   ```
+
+   The token is valid for approximately 2 hours from issuance (per MF documentation). After expiry, repeat steps 2-5.
 
 ### References
 

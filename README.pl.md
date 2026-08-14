@@ -114,7 +114,7 @@ KSeF API v2 wykorzystuje wieloetapowy przepływ challenge/redeem do wydania toke
 2. **Pobranie wyzwania (challenge).** Wywołaj API KSeF, aby uzyskać kopertę XML z wyzwaniem:
 
    ```bash
-   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthorisationChallenge \
+   curl -s https://ksef-test.mf.gov.pl/auth/challenge \
      -H "Accept: application/json" \
      -d '{"contextIdentifier": {"type": "onip", "identifier": "TWOJ_NIP"}}' \
      -H "Content-Type: application/json"
@@ -135,23 +135,31 @@ KSeF API v2 wykorzystuje wieloetapowy przepływ challenge/redeem do wydania toke
      --output podpisane-wyzwanie.xml szablon-wyzwania.xml
    ```
 
-4. **Przeslanie podpisanego wyzwania.** Wyslij podpisany XML, aby uzyskac AccessToken:
+4. **Przeslanie podpisanego wyzwania.** Wyslij podpisany XML, aby otrzymac referencje `authOperation`:
 
    ```bash
-   curl -s https://ksef-test.mf.gov.pl/api/online/Session/AuthoriseXades \
+   curl -s https://ksef-test.mf.gov.pl/auth/xades-signature \
      -H "Content-Type: application/octet-stream" \
      --data-binary @podpisane-wyzwanie.xml
    ```
 
-   Odpowiedz zawiera `sessionToken.token` (AccessToken) oraz `sessionToken.context.referenceNumber`.
-
-5. **Ustawienie tokenu.** Wyeksportuj token dla tego serwera MCP:
+5. **Odbior AccessToken.** Wymien uwierzytelnioną operacje na AccessToken:
 
    ```bash
-   export KSEF_SESSION_TOKEN="<AccessToken z kroku 4>"
+   curl -s https://ksef-test.mf.gov.pl/auth/token/redeem \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <referenceNumber-lub-token-authOperation-z-kroku-4>"
    ```
 
-   Token jest wazny przez okolo 2 godziny od wydania (zgodnie z dokumentacja MF). Po wygasnieciu powtorz kroki 2-4.
+   Odpowiedz zawiera `accessToken.token` oraz `accessToken.context.referenceNumber`.
+
+6. **Ustawienie tokenu.** Wyeksportuj token dla tego serwera MCP:
+
+   ```bash
+   export KSEF_SESSION_TOKEN="<AccessToken z kroku 5>"
+   ```
+
+   Token jest wazny przez okolo 2 godziny od wydania (zgodnie z dokumentacja MF). Po wygasnieciu powtorz kroki 2-5.
 
 ### Zrodla
 
