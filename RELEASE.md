@@ -41,6 +41,11 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.5.1] - 2026-08-14
+#### Changed
+- **[PL-API-2026-08]** reconciled to KSeF production API v2.1.1 (2026-02-13): diffed the full v2.0.1→v2.1.1 CIRFMF changelog against all 8 implemented endpoints; delta clusters entirely on `/auth/*` and `/permissions/*`/`/tokens`/`/testdata/*` areas this package does not implement beyond the challenge/redeem flow
+- `lifecycle.py` docstrings corrected from stale v1-style auth paths (`/api/online/Session/AuthorisationChallenge`, `AuthoriseXades`) to the actual v2 flow (`/auth/challenge` → `/auth/xades-signature` → `/auth/token/redeem`)
+
 ### [0.5.0] - 2026-07-15
 #### Added
 - MF public-key SPKI SHA-256 pinning (`security/mf_pinning.py`), wired into `submit_document()`; inert by default (empty allowlist)
