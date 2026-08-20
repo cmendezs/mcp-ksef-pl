@@ -64,6 +64,7 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 | Narzędzie | Opis |
 |-----------|------|
 | `generate_peppol_invoice` | Generuje fakturę UBL 2.1 zgodną z Peppol BIS Billing 3.0 / EN 16931 |
+| `validate_peppol_invoice` | Waliduje fakturę UBL 2.1 Peppol względem podstawowych reguł Schematron CEN EN 16931 (zakres `en16931-base-only` — nie sprawdza reguł specyficznych dla nakładki Peppol) |
 
 ---
 

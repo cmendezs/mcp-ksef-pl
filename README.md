@@ -64,6 +64,7 @@ The server acts as an intelligent communication interface between the AI agent a
 | Tool | Description |
 |------|-------------|
 | `generate_peppol_invoice` | Generates a UBL 2.1 invoice compliant with Peppol BIS Billing 3.0 / EN 16931 |
+| `validate_peppol_invoice` | Validates a UBL 2.1 Peppol invoice against the CEN EN 16931 base Schematron rules (`en16931-base-only` scope — does not check the Peppol-specific overlay) |
 
 ---
 
