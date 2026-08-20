@@ -23,6 +23,7 @@ from .models import KSeFFA3Options, KSeFInvoice
 from .parser import FA2Parser
 from .party_validator import PolishPartyValidator, validate_nip, validate_regon
 from .peppol import PeppolUBLGenerator
+from .peppol.validator import PeppolValidator
 from .validator import FA2Validator, FA3Validator
 
 setup_logging()
@@ -38,7 +39,9 @@ mcp = FastMCP(
         "Standard KSeF workflow: generate_fa3_invoice"
         " → validate_fa3_invoice → submit_invoice_to_ksef.\n"
         "Use generate_fa2_invoice and validate_fa2_invoice only for legacy document handling.\n"
-        "Use generate_peppol_invoice for cross-border Peppol invoicing.\n"
+        "Use generate_peppol_invoice for cross-border Peppol invoicing, then "
+        "validate_peppol_invoice (EN16931 base rules only — not full Peppol "
+        "BIS3 overlay conformance; see the tool's own docstring).\n"
         "Note: only interactive online sessions (/sessions/online) are supported; "
         "batch submission (/api/batch/) is not yet implemented."
     ),
@@ -50,6 +53,7 @@ _fa2_validator = FA2Validator()
 _fa3_validator = FA3Validator()
 _fa2_parser = FA2Parser()
 _peppol_generator = PeppolUBLGenerator()
+_peppol_validator = PeppolValidator()
 _party_validator = PolishPartyValidator()
 
 
@@ -302,6 +306,25 @@ async def generate_peppol_invoice(invoice: KSeFInvoice) -> str:
     For domestic Polish invoicing, use generate_fa3_invoice instead.
     """
     return await _peppol_generator.generate(invoice)
+
+
+@mcp.tool
+async def validate_peppol_invoice(xml_content: str) -> DocumentValidationResult:
+    """Validate a Peppol BIS 3.0 / EN 16931 UBL 2.1 XML invoice.
+
+    Checks the CEN EN16931 base rules only (structural + arithmetic/totals,
+    ~50 BR-* rules) via mcp-einvoicing-core's bundled Schematron validator.
+    Does NOT check the Peppol-specific overlay (profile/process ID
+    registration, EndpointID scheme, narrowed code lists) — the result's
+    metadata.scope is "en16931-base-only", and a warning is included. This is
+    not a full Peppol BIS3 conformance check; a document that passes may
+    still be rejected by a real Peppol Access Point. See
+    context-library/decisions/peppol-schematron-artifact.md for why.
+
+    Call this after generate_peppol_invoice to check the generated output.
+    Returns a DocumentValidationResult with errors and warnings.
+    """
+    return await _peppol_validator.validate(xml_content)
 
 
 # ---------------------------------------------------------------------------
