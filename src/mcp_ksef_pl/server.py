@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastmcp import FastMCP
 from mcp_einvoicing_core import (
     DocumentValidationResult,
+    EInvoicingMCPServer,
 )
 from mcp_einvoicing_core.base_server import assert_not_read_only
 from mcp_einvoicing_core.confirmation import ConfirmationGate
 from mcp_einvoicing_core.logging_utils import get_logger, setup_logging
+from mcp_einvoicing_core.peppol.tools import register_peppol_tools
 
 from .config import KSeFSettings
 from .generator import FA2Generator, FA3Generator
@@ -29,24 +30,6 @@ from .validator import FA2Validator, FA3Validator
 setup_logging()
 logger = get_logger(__name__)
 
-mcp = FastMCP(
-    name="mcp-ksef-pl",
-    instructions=(
-        "MCP server for Polish electronic invoicing.\n"
-        "Supports KSeF FA(2) (legacy, read-only), FA(3) (mandatory for KSeF API v2 submissions, "
-        "reconciled against the production API through v2.1.1), "
-        "and Peppol BIS 3.0 / EN 16931 UBL.\n"
-        "Standard KSeF workflow: generate_fa3_invoice"
-        " → validate_fa3_invoice → submit_invoice_to_ksef.\n"
-        "Use generate_fa2_invoice and validate_fa2_invoice only for legacy document handling.\n"
-        "Use generate_peppol_invoice for cross-border Peppol invoicing, then "
-        "validate_peppol_invoice (EN16931 base rules only — not full Peppol "
-        "BIS3 overlay conformance; see the tool's own docstring).\n"
-        "Note: only interactive online sessions (/sessions/online) are supported; "
-        "batch submission (/api/batch/) is not yet implemented."
-    ),
-)
-
 _fa2_generator = FA2Generator()
 _fa3_generator = FA3Generator()
 _fa2_validator = FA2Validator()
@@ -57,12 +40,26 @@ _peppol_validator = PeppolValidator()
 _party_validator = PolishPartyValidator()
 
 
+def _pl_id_adapter(identifier: str) -> str:
+    """Normalize a bare Polish NIP to a Peppol participant ID.
+
+    Scheme 9945 (PL:VAT, "Poland VAT number") per the OpenPeppol eDEC
+    Participant Identifier Schemes code list v9.7. Already scheme-qualified
+    identifiers (containing ':') pass through unchanged.
+    """
+    import re
+
+    if ":" in identifier:
+        return identifier
+    digits = re.sub(r"[\s-]", "", identifier)
+    return f"9945:{digits}"
+
+
 # ---------------------------------------------------------------------------
 # FA(2) tools
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool
 async def generate_fa2_invoice(invoice: KSeFInvoice) -> str:
     """Generate a KSeF-compliant FA(2) XML invoice from structured invoice data.
 
@@ -72,7 +69,6 @@ async def generate_fa2_invoice(invoice: KSeFInvoice) -> str:
     return await _fa2_generator.generate(invoice)
 
 
-@mcp.tool
 async def generate_fa3_invoice(
     invoice: KSeFInvoice,
     options: KSeFFA3Options | None = None,
@@ -98,7 +94,6 @@ async def generate_fa3_invoice(
     return await _fa3_generator.generate(invoice, options=options)
 
 
-@mcp.tool
 async def validate_fa2_invoice(xml_content: str) -> DocumentValidationResult:
     """Validate a KSeF FA(2) XML invoice.
 
@@ -108,7 +103,6 @@ async def validate_fa2_invoice(xml_content: str) -> DocumentValidationResult:
     return await _fa2_validator.validate(xml_content)
 
 
-@mcp.tool
 async def validate_fa3_invoice(xml_content: str) -> DocumentValidationResult:
     """Validate a KSeF FA(3) XML invoice before submission to KSeF API v2 (PL-6.2).
 
@@ -123,7 +117,6 @@ async def validate_fa3_invoice(xml_content: str) -> DocumentValidationResult:
     return await _fa3_validator.validate(xml_content)
 
 
-@mcp.tool
 async def parse_fa2_invoice(xml_content: str) -> dict[str, Any]:
     """Parse a KSeF FA(2) XML invoice into a structured dictionary.
 
@@ -137,7 +130,6 @@ async def parse_fa2_invoice(xml_content: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool
 async def submit_invoice_to_ksef(
     xml_content: str,
     session_token: str = "",
@@ -210,7 +202,6 @@ async def submit_invoice_to_ksef(
     }
 
 
-@mcp.tool
 async def get_ksef_invoice_status(reference_number: str) -> dict[str, Any]:
     """Retrieve the processing status of a submitted KSeF invoice (API v2).
 
@@ -225,7 +216,6 @@ async def get_ksef_invoice_status(reference_number: str) -> dict[str, Any]:
     return await manager.get_document_status(reference_number)
 
 
-@mcp.tool
 async def search_ksef_invoices(
     date_from: str,
     date_to: str,
@@ -253,7 +243,6 @@ async def search_ksef_invoices(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool
 async def validate_polish_nip(nip: str) -> dict[str, Any]:
     """Validate a Polish NIP (tax identification number).
 
@@ -274,7 +263,6 @@ async def validate_polish_nip(nip: str) -> dict[str, Any]:
     }
 
 
-@mcp.tool
 async def validate_polish_regon(regon: str) -> dict[str, Any]:
     """Validate a Polish REGON (business registry number — 9 or 14 digits).
 
@@ -298,7 +286,6 @@ async def validate_polish_regon(regon: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool
 async def generate_peppol_invoice(invoice: KSeFInvoice) -> str:
     """Generate a Peppol BIS Billing 3.0 / EN 16931 UBL 2.1 XML invoice.
 
@@ -308,7 +295,6 @@ async def generate_peppol_invoice(invoice: KSeFInvoice) -> str:
     return await _peppol_generator.generate(invoice)
 
 
-@mcp.tool
 async def validate_peppol_invoice(xml_content: str) -> DocumentValidationResult:
     """Validate a Peppol BIS 3.0 / EN 16931 UBL 2.1 XML invoice.
 
@@ -328,8 +314,49 @@ async def validate_peppol_invoice(xml_content: str) -> DocumentValidationResult:
 
 
 # ---------------------------------------------------------------------------
-# Entry-point
+# Tool registration
 # ---------------------------------------------------------------------------
+
+
+def _register_pl_tools(mcp: Any) -> None:
+    """Register all Polish e-invoicing tools onto the shared FastMCP instance."""
+    mcp.tool()(generate_fa2_invoice)
+    mcp.tool()(generate_fa3_invoice)
+    mcp.tool()(validate_fa2_invoice)
+    mcp.tool()(validate_fa3_invoice)
+    mcp.tool()(parse_fa2_invoice)
+    mcp.tool()(submit_invoice_to_ksef)
+    mcp.tool()(get_ksef_invoice_status)
+    mcp.tool()(search_ksef_invoices)
+    mcp.tool()(validate_polish_nip)
+    mcp.tool()(validate_polish_regon)
+    mcp.tool()(generate_peppol_invoice)
+    mcp.tool()(validate_peppol_invoice)
+
+
+mcp = EInvoicingMCPServer(
+    "mcp-ksef-pl",
+    instructions=(
+        "MCP server for Polish electronic invoicing.\n"
+        "Supports KSeF FA(2) (legacy, read-only), FA(3) (mandatory for KSeF API v2 submissions, "
+        "reconciled against the production API through v2.1.1), "
+        "and Peppol BIS 3.0 / EN 16931 UBL.\n"
+        "Standard KSeF workflow: generate_fa3_invoice"
+        " → validate_fa3_invoice → submit_invoice_to_ksef.\n"
+        "Use generate_fa2_invoice and validate_fa2_invoice only for legacy document handling.\n"
+        "Use generate_peppol_invoice for cross-border Peppol invoicing, then "
+        "validate_peppol_invoice (EN16931 base rules only — not full Peppol "
+        "BIS3 overlay conformance; see the tool's own docstring). "
+        "peppol_lookup_participant and related Peppol network tools accept a bare "
+        "Polish NIP (normalized to Peppol scheme 9945) or a full participant ID.\n"
+        "Note: only interactive online sessions (/sessions/online) are supported; "
+        "batch submission (/api/batch/) is not yet implemented."
+    ),
+)
+mcp.register_plugin(_register_pl_tools, "pl")
+mcp.register_plugin(
+    lambda m: register_peppol_tools(m, id_adapter=_pl_id_adapter), "peppol"
+)
 
 
 def main() -> None:

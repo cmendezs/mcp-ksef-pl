@@ -66,6 +66,21 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 | `generate_peppol_invoice` | Generuje fakturę UBL 2.1 zgodną z Peppol BIS Billing 3.0 / EN 16931 |
 | `validate_peppol_invoice` | Waliduje fakturę UBL 2.1 Peppol względem podstawowych reguł Schematron CEN EN 16931 (zakres `en16931-base-only` — nie sprawdza reguł specyficznych dla nakładki Peppol) |
 
+### Narzędzia sieci Peppol
+
+Wyszukiwanie uczestnika Peppol, wyszukiwanie punktu usługowego, diagnostyka wyłącznie DNS, wysyłka AS4 oraz narzędzia list kodów OpenPeppol eDEC są dostarczane przez współdzielony wtyczkowy zestaw narzędzi Peppol z rdzenia (`mcp_einvoicing_core.peppol.tools.register_peppol_tools`), zamontowany w `server.py` z adapterem identyfikatora specyficznym dla Polski: goły NIP (np. `1234563218`) jest normalizowany do schematu Peppol `9945:<cyfry>` (`PL:VAT`, zgodnie z listą kodów OpenPeppol eDEC Participant Identifier Schemes); identyfikator już kwalifikowany schematem (np. `9945:1234563218`) przechodzi bez zmian. Użyj tych narzędzi, aby sprawdzić status rejestracji w PEF (polskim punkcie dostępowym Peppol dla fakturowania B2G w zamówieniach publicznych) przed użyciem `generate_peppol_invoice`.
+
+| Narzędzie | Opis |
+|-----------|------|
+| `peppol_lookup_participant` | Sprawdza, czy firma jest zarejestrowana w sieci Peppol; zwraca status rejestracji i obsługiwane typy dokumentów |
+| `peppol_get_service_endpoint` | Pobiera punkt końcowy AS4 dla typu dokumentu uczestnika |
+| `resolve_peppol_dns` | Diagnostyka wyłącznie DNS (SML), niezależna od dostępności SMP |
+| `peppol_send` | Przesyła fakturę UBL/CII przez AS4 |
+| `list_participant_id_schemes`, `list_document_type_ids`, `list_process_ids`, `list_spis_use_case_ids` | Wyszukiwania w listach kodów OpenPeppol eDEC (wymagają `EINVOICING_PEPPOL_CODELIST_DIR`) |
+| `check_document_type_id_in_codelist`, `check_process_id_in_codelist`, `check_participant_id_scheme_in_codelist`, `get_peppol_codelist_version` | Sprawdzenia list kodów OpenPeppol eDEC i raportowanie wersji |
+
+Pełną dokumentację parametrów tych narzędzi znajdziesz w [README `mcp-einvoicing-core`](https://github.com/cmendezs/mcp-einvoicing-core#readme).
+
 ---
 
 ## 🚀 Instalacja
@@ -101,6 +116,7 @@ uv sync --all-extras
 | `KSEF_NIP` | — | NIP podmiotu wysyłającego faktury |
 | `KSEF_TIMEOUT` | `30` | Limit czasu żądań HTTP w sekundach |
 | `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Wymusza przypinanie SPKI SHA-256 dla certyfikatu szyfrującego MF. Nieaktywne, dopóki odciski palca nie zostaną skonfigurowane dla danego środowiska, nawet jeśli ustawione na `true` |
+| `EINVOICING_PEPPOL_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię list kodów OpenPeppol eDEC, wymagany przez narzędzia list kodów Peppol (nie dołączony do tego pakietu; zobacz README `mcp-einvoicing-core`) |
 
 ---
 

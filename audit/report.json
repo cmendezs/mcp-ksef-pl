@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-20T08:51:09.328018+00:00",
+  "generated_at": "2026-08-21T17:42:20.459746+00:00",
   "pkg_name": "mcp-ksef-pl",
-  "pkg_version": "0.6.0",
-  "core_version": "1.18.1",
+  "pkg_version": "0.7.0",
+  "core_version": "1.19.0",
   "core_version_compatible": true,
   "exit_code": 0,
   "total_blocking": 0,
@@ -707,6 +707,13 @@
           "check_id": "CHECK_1",
           "tag": "[OVERRIDE]",
           "severity": "OK",
+          "symbol": "mcp_einvoicing_core.pdf.Union",
+          "message": "Intentionally overridden by mcp-ksef-pl."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.Enum",
           "message": "Intentionally overridden by mcp-ksef-pl."
         },
@@ -764,6 +771,13 @@
           "tag": "[OVERRIDE]",
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.field",
+          "message": "Intentionally overridden by mcp-ksef-pl."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.peppol.resolve_naptr",
           "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
@@ -1210,7 +1224,7 @@
           "tag": "[OK]",
           "severity": "OK",
           "symbol": "mcp-einvoicing-core",
-          "message": "Installed: 1.18.1 | Declared range: >=1.18.0,<2.0.0 | Compatible: True"
+          "message": "Installed: 1.19.0 | Declared range: >=1.19.0,<2.0.0 | Compatible: True"
         }
       ]
     },
@@ -1242,7 +1256,7 @@
           "tag": "[OK]",
           "severity": "OK",
           "symbol": "server.mcp",
-          "message": "server.mcp is a FastMCP instance."
+          "message": "server.mcp is an EInvoicingMCPServer instance."
         },
         {
           "check_id": "CHECK_5",

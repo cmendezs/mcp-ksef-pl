@@ -41,6 +41,12 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.7.0] - 2026-08-21
+#### Changed
+- **[ARCH-CONVERGE-PL]** `server.py` converted from a raw `FastMCP` instance to `EInvoicingMCPServer`/`register_plugin`, matching the other country packages. Mounts the shared core Peppol tool plugin (`mcp_einvoicing_core.peppol.tools.register_peppol_tools`) with a Poland-specific identifier adapter that normalizes a bare NIP to the `9945:<digits>` Peppol scheme (`PL:VAT`, per the OpenPeppol eDEC Participant Identifier Schemes code list v9.7). PL gains 12 new Peppol network tools it did not have before: `peppol_lookup_participant`, `peppol_get_service_endpoint`, `resolve_peppol_dns`, `peppol_send`, and 8 eDEC codelist tools.
+- Lower-bound pin on `mcp-einvoicing-core` raised to `>=1.19.0` (was `>=1.18.0`), required for `register_peppol_tools`.
+- Removed the direct `fastmcp` dependency; no longer imported directly now that `server.py` uses `EInvoicingMCPServer` (still available transitively via `mcp-einvoicing-core`).
+
 ### [0.6.0] - 2026-08-20
 #### Added
 - **[CORE-EN16931-BASE-SCHEMATRON-1]** `validate_peppol_invoice` tool, closing the gap where this package's Peppol path (`generate_peppol_invoice`/`peppol/parser.py`/`peppol/serializer.py`) had no validation tool at all. Delegates to `mcp-einvoicing-core`'s bundled CEN EN16931 base Schematron (`en16931_base_schematron_validator`, core >= 1.18.0). Checks the ~50 CEN `BR-*` structural/arithmetic rules only — does NOT check the Peppol-specific overlay (profile/process ID registration, `EndpointID` scheme, narrowed code lists). Every result carries `metadata.scope="en16931-base-only"` and an explicit warning; never presented as full Peppol BIS3 conformance. See `context-library/decisions/peppol-schematron-artifact.md` for why the overlay itself still cannot ship (no confirmed OpenPeppol redistribution rights).

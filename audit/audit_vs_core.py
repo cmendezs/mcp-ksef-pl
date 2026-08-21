@@ -179,19 +179,29 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # PDF/A-3 embedding is not required for KSeF XML invoices.
     "mcp_einvoicing_core.pdf": {
         "PDFEmbedder",
+        # OVERRIDE-REASON: stdlib re-export in pdf module; not used directly by PL
+        "Union",
     },
     # Peppol BIS 3.0 UBL generation/parsing (peppol/generator.py, peppol/parser.py,
     # peppol/serializer.py) is implemented directly on top of core's
-    # EN16931UBLSerializer/EN16931UBLParser (wire_formats). PL does not perform
-    # live Peppol network directory lookups, so the SMP participant-lookup client
-    # and its supporting types are unused. Enum/dataclass/field are stdlib
-    # imports used internally by peppol.py itself.
+    # EN16931UBLSerializer/EN16931UBLParser (wire_formats).
+    # ARCH-CONVERGE-PL resolved: PL now mounts the shared core Peppol tool plugin
+    # (mcp_einvoicing_core.peppol.tools.register_peppol_tools, in server.py), which
+    # gains live Peppol network directory lookups (peppol_lookup_participant,
+    # resolve_peppol_dns, etc.) without PL's own code importing the SMP
+    # participant-lookup client or its supporting types directly — the mounted
+    # plugin does that internally. Enum/dataclass/field are stdlib imports used
+    # internally by peppol.py itself.
     "mcp_einvoicing_core.peppol": {
         "PeppolEnvironment",
         "PeppolLookupResult",
         "PeppolParticipantId",
         "PeppolSMPClient",
         "PeppolServiceInfo",
+        # OVERRIDE-REASON: resolve_naptr (core v1.19.0) is a standalone DNS diagnostic;
+        # PL's mounted core plugin exposes it as the resolve_peppol_dns tool, PL package
+        # code itself has no direct call site
+        "resolve_naptr",
         "Enum",
         "dataclass",
         "field",
@@ -448,24 +458,25 @@ def run_check_5() -> CheckResult:
                 ),
             ))
 
-        # 5b: mcp must be a FastMCP instance
+        # 5b: mcp must be an EInvoicingMCPServer instance (ARCH-CONVERGE-PL)
         mcp_obj = getattr(server_mod, "mcp", None)
-        if mcp_obj is not None:
-            mcp_type = type(mcp_obj).__name__
-            tag = "[OK]" if mcp_type == "FastMCP" else "[UNEXPECTED_TYPE]"
-            sev = SEVERITY_OK if mcp_type == "FastMCP" else SEVERITY_WARNING
-            result.findings.append(CheckFinding(
-                check_id="CHECK_5", tag=tag, severity=sev,
-                symbol="server.mcp",
-                message=(
-                    "server.mcp is a FastMCP instance."
-                    if mcp_type == "FastMCP"
-                    else (
-                        f"server.mcp is {mcp_type!r}, expected FastMCP. "
-                        "Verify tool registration is using FastMCP decorators."
-                    )
-                ),
-            ))
+        core_mod, _ = _try_import("mcp_einvoicing_core")
+        server_cls = getattr(core_mod, "EInvoicingMCPServer", None) if core_mod else None
+        if mcp_obj is not None and server_cls is not None:
+            if isinstance(mcp_obj, server_cls):
+                result.findings.append(CheckFinding(
+                    check_id="CHECK_5", tag="[OK]", severity=SEVERITY_OK,
+                    symbol="server.mcp",
+                    message="server.mcp is an EInvoicingMCPServer instance.",
+                ))
+            else:
+                result.findings.append(CheckFinding(
+                    check_id="CHECK_5", tag="[WRONG_TYPE]", severity=SEVERITY_WARNING,
+                    symbol="server.mcp",
+                    message=(
+                        f"server.mcp is {type(mcp_obj).__name__}, expected EInvoicingMCPServer."
+                    ),
+                ))
 
     # 5c: KSeFEnvironment enum exists in config
     config_mod, err = _try_import("mcp_ksef_pl.config")
