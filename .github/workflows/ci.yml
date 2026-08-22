@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Tests ──────────────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package + dev dependencies
+        run: uv sync --all-extras
+
+      - name: Lint with ruff
+        run: uv run ruff check src/mcp_ksef_pl/ tests/ audit/
+
+      - name: Run tests
+        run: uv run pytest --tb=short
+
+  # ── Pre-publish audit ──────────────────────────────────────────────────────
+  audit:
+    name: Pre-publish audit vs mcp-einvoicing-core
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install package + dev dependencies
+        run: uv sync --all-extras
+
+      - name: Run pre-publish audit
+        # Exit code 2 = blocking failures → job fails
+        # Exit code 1 = warnings only     → job passes (informational)
+        run: uv run python audit/audit_vs_core.py --output audit/report.json --fail-on blocking
+
+      - name: Upload audit report
+        if: always()   # Upload even on failure so the report is inspectable
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: audit/report.json
