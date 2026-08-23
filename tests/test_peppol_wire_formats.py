@@ -9,9 +9,7 @@ from mcp_einvoicing_core.en16931 import EN16931Address, EN16931LineItem, EN16931
 from mcp_ksef_pl.models import KSeFInvoice, KSeFParty
 from mcp_ksef_pl.peppol import KSeFPeppolUBLParser, KSeFPeppolUBLSerializer
 
-_CUSTOMIZATION_ID = (
-    "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
-)
+_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
 _PROFILE_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
 
 
@@ -157,13 +155,9 @@ class TestKSeFPeppolUBLSerializer:
         assert "PL/2024/0042" in xml
         assert "2024-06-01" in xml
 
-    def test_party_without_address_uses_fallback(
-        self, serializer: KSeFPeppolUBLSerializer
-    ) -> None:
+    def test_party_without_address_uses_fallback(self, serializer: KSeFPeppolUBLSerializer) -> None:
         seller = KSeFParty(name="No Address Seller", nip="5261040828", address=None)
-        buyer = KSeFParty(
-            name="Buyer", eu_vat_country="DE", eu_vat_id="123456789", address=None
-        )
+        buyer = KSeFParty(name="Buyer", eu_vat_country="DE", eu_vat_id="123456789", address=None)
         invoice = KSeFInvoice(
             profile=_CUSTOMIZATION_ID,
             invoice_number="TEST/001",

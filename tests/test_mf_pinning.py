@@ -24,9 +24,7 @@ from mcp_ksef_pl.security.mf_pinning import (
 
 def _make_self_signed_cert_der() -> bytes:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "mf-pinning-test")]
-    )
+    subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "mf-pinning-test")])
     now = datetime.datetime.now(datetime.UTC)
     cert = (
         x509.CertificateBuilder()
@@ -54,16 +52,12 @@ class TestVerifyMfSpkiPin:
 
     def test_raises_when_fingerprint_not_pinned(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cert_der = _make_self_signed_cert_der()
-        monkeypatch.setitem(
-            mf_pinning._MF_SPKI_SHA256_PINS, "test", frozenset({"deadbeef"})
-        )
+        monkeypatch.setitem(mf_pinning._MF_SPKI_SHA256_PINS, "test", frozenset({"deadbeef"}))
         with pytest.raises(MFKeyPinningError, match="not in the pinned allowlist"):
             verify_mf_spki_pin(cert_der, "test", enforce=True)
 
     def test_passes_when_fingerprint_pinned(self, monkeypatch: pytest.MonkeyPatch) -> None:
         cert_der = _make_self_signed_cert_der()
         fingerprint = compute_spki_sha256_hex(cert_der)
-        monkeypatch.setitem(
-            mf_pinning._MF_SPKI_SHA256_PINS, "test", frozenset({fingerprint})
-        )
+        monkeypatch.setitem(mf_pinning._MF_SPKI_SHA256_PINS, "test", frozenset({fingerprint}))
         verify_mf_spki_pin(cert_der, "test", enforce=True)

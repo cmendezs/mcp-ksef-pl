@@ -57,6 +57,7 @@ def sample_fa3_xml() -> str:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class TestPickEncryptionCert:
     def test_picks_symmetric_key_cert(self) -> None:
         certs = [
@@ -95,6 +96,7 @@ class TestToIsoDatetime:
 # KSeFLifecycleManager — submit
 # ---------------------------------------------------------------------------
 
+
 class TestSubmitDocument:
     @pytest.mark.asyncio
     async def test_submit_returns_compound_reference(
@@ -119,8 +121,10 @@ class TestSubmitDocument:
 
         with (
             patch.object(
-                manager._client, "get_public_key_certificates",
-                new_callable=AsyncMock, return_value=fake_certs,
+                manager._client,
+                "get_public_key_certificates",
+                new_callable=AsyncMock,
+                return_value=fake_certs,
             ),
             patch(
                 "mcp_ksef_pl.lifecycle.load_mf_public_key",
@@ -131,15 +135,20 @@ class TestSubmitDocument:
                 return_value=fake_envelope,
             ),
             patch.object(
-                manager._client, "open_online_session",
-                new_callable=AsyncMock, return_value="SESSION-REF-001",
+                manager._client,
+                "open_online_session",
+                new_callable=AsyncMock,
+                return_value="SESSION-REF-001",
             ),
             patch.object(
-                manager._client, "send_invoice_to_session",
-                new_callable=AsyncMock, return_value="INVOICE-REF-001",
+                manager._client,
+                "send_invoice_to_session",
+                new_callable=AsyncMock,
+                return_value="INVOICE-REF-001",
             ),
             patch.object(
-                manager._client, "close_online_session",
+                manager._client,
+                "close_online_session",
                 new_callable=AsyncMock,
             ),
         ):
@@ -168,30 +177,39 @@ class TestSubmitDocument:
         fake_envelope.encrypted_symmetric_key = "encKey=="
         fake_envelope.initialization_vector = "iv=="
         fake_envelope.build_send_payload.return_value = {
-            "invoiceHash": "abc==", "invoiceSize": 100,
-            "encryptedInvoiceHash": "def==", "encryptedInvoiceSize": 128,
+            "invoiceHash": "abc==",
+            "invoiceSize": 100,
+            "encryptedInvoiceHash": "def==",
+            "encryptedInvoiceSize": 128,
             "encryptedInvoiceContent": "ghi==",
         }
 
         with (
             patch.object(
-                manager._client, "get_public_key_certificates",
+                manager._client,
+                "get_public_key_certificates",
                 new_callable=AsyncMock,
                 return_value=[{"certificate": "CERT==", "usage": ["SymmetricKeyEncryption"]}],
             ),
             patch("mcp_ksef_pl.lifecycle.load_mf_public_key", return_value=MagicMock()),
             patch("mcp_ksef_pl.lifecycle.InvoiceEnvelope", return_value=fake_envelope),
             patch.object(
-                manager._client, "open_online_session",
-                new_callable=AsyncMock, return_value="SESSION-001",
+                manager._client,
+                "open_online_session",
+                new_callable=AsyncMock,
+                return_value="SESSION-001",
             ),
             patch.object(
-                manager._client, "send_invoice_to_session",
-                new_callable=AsyncMock, return_value="INV-001",
+                manager._client,
+                "send_invoice_to_session",
+                new_callable=AsyncMock,
+                return_value="INV-001",
             ),
             patch.object(
-                manager._client, "close_online_session",
-                new_callable=AsyncMock, side_effect=Exception("network timeout"),
+                manager._client,
+                "close_online_session",
+                new_callable=AsyncMock,
+                side_effect=Exception("network timeout"),
             ),
         ):
             result = await manager.submit_document(sample_fa3_xml, {})
@@ -206,17 +224,18 @@ class TestSubmitDocument:
 # KSeFLifecycleManager — status
 # ---------------------------------------------------------------------------
 
+
 class TestGetDocumentStatus:
     @pytest.mark.asyncio
-    async def test_compound_ref_calls_invoice_status(
-        self, test_settings: KSeFSettings
-    ) -> None:
+    async def test_compound_ref_calls_invoice_status(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         expected = {"status": {"code": 200, "description": "Accepted"}}
 
         with patch.object(
-            manager._client, "get_invoice_status",
-            new_callable=AsyncMock, return_value=expected,
+            manager._client,
+            "get_invoice_status",
+            new_callable=AsyncMock,
+            return_value=expected,
         ) as mock_status:
             result = await manager.get_document_status("SESSION-001:INV-001")
 
@@ -224,15 +243,15 @@ class TestGetDocumentStatus:
         assert result == expected
 
     @pytest.mark.asyncio
-    async def test_session_only_ref_calls_session_status(
-        self, test_settings: KSeFSettings
-    ) -> None:
+    async def test_session_only_ref_calls_session_status(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         expected = {"status": "processed", "invoiceCount": 1}
 
         with patch.object(
-            manager._client, "get_session_status",
-            new_callable=AsyncMock, return_value=expected,
+            manager._client,
+            "get_session_status",
+            new_callable=AsyncMock,
+            return_value=expected,
         ) as mock_status:
             result = await manager.get_document_status("SESSION-001")
 
@@ -244,6 +263,7 @@ class TestGetDocumentStatus:
 # KSeFLifecycleManager — search
 # ---------------------------------------------------------------------------
 
+
 class TestSearchDocuments:
     @pytest.mark.asyncio
     async def test_search_builds_v2_payload(self, test_settings: KSeFSettings) -> None:
@@ -251,8 +271,10 @@ class TestSearchDocuments:
         mock_response = {"invoices": [{"ksefNumber": "REF-001"}], "hasMore": False}
 
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value=mock_response,
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value=mock_response,
         ) as mock_query:
             results = await manager.search_documents(
                 {
@@ -276,8 +298,10 @@ class TestSearchDocuments:
         manager = KSeFLifecycleManager(test_settings)
 
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value={"invoices": []},
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value={"invoices": []},
         ) as mock_query:
             await manager.search_documents({})
 

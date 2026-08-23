@@ -24,9 +24,7 @@ pytestmark = pytest.mark.integration
 def _require_ksef_env() -> None:
     missing = _missing_vars()
     if missing:
-        pytest.skip(
-            f"KSeF integration tests require env vars: {', '.join(missing)}"
-        )
+        pytest.skip(f"KSeF integration tests require env vars: {', '.join(missing)}")
 
 
 @pytest.fixture(scope="session")

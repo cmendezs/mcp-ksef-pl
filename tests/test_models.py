@@ -62,5 +62,8 @@ class TestKSeFAttachment:
 class TestSubjectType:
     def test_members(self) -> None:
         assert {m.value for m in SubjectType} == {
-            "Subject1", "Subject2", "Subject3", "SubjectAuthorized",
+            "Subject1",
+            "Subject2",
+            "Subject3",
+            "SubjectAuthorized",
         }

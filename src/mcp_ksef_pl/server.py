@@ -166,6 +166,7 @@ async def submit_invoice_to_ksef(
     _FA3_NS = "http://crd.gov.pl/wzor/2025/06/25/13775/"
     if _FA3_NS not in xml_content:
         from mcp_einvoicing_core import DocumentGenerationError
+
         raise DocumentGenerationError(
             "xml_content does not appear to be FA(3) XML (namespace not found). "
             "Use generate_fa3_invoice — not generate_fa2_invoice — before calling "
@@ -354,9 +355,7 @@ mcp = EInvoicingMCPServer(
     ),
 )
 mcp.register_plugin(_register_pl_tools, "pl")
-mcp.register_plugin(
-    lambda m: register_peppol_tools(m, id_adapter=_pl_id_adapter), "peppol"
-)
+mcp.register_plugin(lambda m: register_peppol_tools(m, id_adapter=_pl_id_adapter), "peppol")
 
 
 def main() -> None:

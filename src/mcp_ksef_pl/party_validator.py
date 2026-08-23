@@ -64,9 +64,7 @@ class PolishPartyValidator(BasePartyValidator):
     async def validate_buyer(self, party: object) -> DocumentValidationResult:
         return await self._validate_ksef_party(party, "buyer")
 
-    async def _validate_ksef_party(
-        self, party: object, role: str
-    ) -> DocumentValidationResult:
+    async def _validate_ksef_party(self, party: object, role: str) -> DocumentValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
 
@@ -75,14 +73,10 @@ class PolishPartyValidator(BasePartyValidator):
         # NIP is mandatory for Polish sellers; warn for foreign buyers
         if country == "PL":
             if not validate_nip(nip):
-                errors.append(
-                    f"{role.capitalize()} NIP '{nip}'"
-                    " failed checksum validation."
-                )
+                errors.append(f"{role.capitalize()} NIP '{nip}' failed checksum validation.")
         else:
             warnings.append(
-                f"{role.capitalize()} is non-Polish ({country}); "
-                "NIP checksum not applied."
+                f"{role.capitalize()} is non-Polish ({country}); NIP checksum not applied."
             )
 
         has_address, postcode = _extract_address_postcode(party)

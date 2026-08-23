@@ -24,9 +24,7 @@ class TestPeppolValidator:
         assert "EN16931" in validator.get_schema_version()
 
     @pytest.mark.asyncio
-    async def test_malformed_xml_reports_xml_parse_error(
-        self, validator: PeppolValidator
-    ) -> None:
+    async def test_malformed_xml_reports_xml_parse_error(self, validator: PeppolValidator) -> None:
         result = await validator.validate("<not valid xml")
         assert result.valid is False
         assert result.metadata["engine"] == "schematron-xslt"

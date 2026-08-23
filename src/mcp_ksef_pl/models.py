@@ -63,9 +63,7 @@ class KSeFParty(EN16931Party):
     eu_vat_country: str | None = Field(
         None, description="EU VAT country code for non-PL sellers/buyers"
     )
-    eu_vat_id: str | None = Field(
-        None, description="EU VAT number for non-PL sellers/buyers"
-    )
+    eu_vat_id: str | None = Field(None, description="EU VAT number for non-PL sellers/buyers")
     gln: str | None = Field(None, description="GS1 Global Location Number")
 
     @model_validator(mode="after")
@@ -119,9 +117,7 @@ class KSeFInvoice(EN16931Invoice):
         sum_of_lines = sum((li.line_net_amount for li in line_items), Decimal("0"))
         tax_total = sum((t.tax_amount for t in tax_lines), Decimal("0"))
         tax_excl = (
-            sum((t.taxable_amount for t in tax_lines), Decimal("0"))
-            if tax_lines
-            else sum_of_lines
+            sum((t.taxable_amount for t in tax_lines), Decimal("0")) if tax_lines else sum_of_lines
         )
         tax_incl = tax_excl + tax_total
 
@@ -166,7 +162,9 @@ class KSeFAttachment(BaseModel):
         None, max_length=512, description="Optional 512-char BlokDanych header"
     )
     metadata: list[tuple[str, str]] = Field(
-        ..., min_length=1, max_length=1000,
+        ...,
+        min_length=1,
+        max_length=1000,
         description="Mandatory (ZKlucz, ZWartosc) key-value pairs, 1..1000 entries",
     )
     text_paragraphs: list[str] | None = Field(
@@ -236,9 +234,7 @@ class KSeFCorrectionRef(BaseModel):
         ksef_branch = self.numer_ksef and bool(self.nr_ksef_fa_korygowanej)
         ksefn_branch = self.numer_ksefn
         if self.numer_ksef and not self.nr_ksef_fa_korygowanej:
-            raise ValueError(
-                "numer_ksef=True requires nr_ksef_fa_korygowanej to be set."
-            )
+            raise ValueError("numer_ksef=True requires nr_ksef_fa_korygowanej to be set.")
         if ksef_branch and ksefn_branch:
             raise ValueError(
                 "KSeFCorrectionRef choice violation: set either "

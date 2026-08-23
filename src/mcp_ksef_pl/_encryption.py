@@ -92,7 +92,7 @@ class InvoiceEnvelope:
 
     def __init__(self, mf_public_key: RSAPublicKey) -> None:
         self._aes_key: bytes = os.urandom(32)  # 256-bit
-        self._iv: bytes = os.urandom(16)        # 128-bit CBC IV
+        self._iv: bytes = os.urandom(16)  # 128-bit CBC IV
 
         encrypted_key = mf_public_key.encrypt(
             self._aes_key,
@@ -145,9 +145,7 @@ class InvoiceEnvelope:
         """
         xml_bytes = xml_content.encode("utf-8")
 
-        invoice_hash = base64.b64encode(
-            hashlib.sha256(xml_bytes).digest()
-        ).decode()
+        invoice_hash = base64.b64encode(hashlib.sha256(xml_bytes).digest()).decode()
 
         padder = PKCS7(algorithms.AES.block_size).padder()
         padded = padder.update(xml_bytes) + padder.finalize()
@@ -156,9 +154,7 @@ class InvoiceEnvelope:
         encryptor = cipher.encryptor()
         encrypted: bytes = encryptor.update(padded) + encryptor.finalize()
 
-        encrypted_hash = base64.b64encode(
-            hashlib.sha256(encrypted).digest()
-        ).decode()
+        encrypted_hash = base64.b64encode(hashlib.sha256(encrypted).digest()).decode()
 
         return {
             "invoiceHash": invoice_hash,

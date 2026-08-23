@@ -10,10 +10,10 @@ class TestNIP:
     @pytest.mark.parametrize(
         "nip,expected",
         [
-            ("5261040828", True),   # Ministerstwo Finansów — real NIP, checksum verified
-            ("5260250274", True),   # valid NIP
+            ("5261040828", True),  # Ministerstwo Finansów — real NIP, checksum verified
+            ("5260250274", True),  # valid NIP
             ("1234567890", False),  # weighted sum mod 11 == 10 → structurally impossible
-            ("000000000", False),   # too short (9 digits)
+            ("000000000", False),  # too short (9 digits)
             ("abcdefghij", False),  # non-digits
             ("526-104-08-28", True),  # dashes are stripped before validation
             ("526 104 08 28", True),  # spaces are stripped before validation
@@ -28,11 +28,11 @@ class TestREGON:
     @pytest.mark.parametrize(
         "regon,expected",
         [
-            ("000331501", True),         # GUS (Central Statistical Office) — verified
-            ("000331502", False),        # off-by-one check digit — checksum fails
-            ("00033150100017", True),    # valid 14-digit REGON (GUS + local unit)
-            ("00033150100018", False),   # off-by-one 14-digit — checksum fails
-            ("abc", False),              # non-digits
+            ("000331501", True),  # GUS (Central Statistical Office) — verified
+            ("000331502", False),  # off-by-one check digit — checksum fails
+            ("00033150100017", True),  # valid 14-digit REGON (GUS + local unit)
+            ("00033150100018", False),  # off-by-one 14-digit — checksum fails
+            ("abc", False),  # non-digits
         ],
     )
     def test_validate_regon(self, regon: str, expected: bool) -> None:

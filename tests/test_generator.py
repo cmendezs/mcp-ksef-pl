@@ -134,9 +134,7 @@ class TestFA3Generator:
         assert generator.get_namespace() == _NS3
 
     @pytest.mark.asyncio
-    async def test_namespace(
-        self, generator: FA3Generator, sample_invoice: KSeFInvoice
-    ) -> None:
+    async def test_namespace(self, generator: FA3Generator, sample_invoice: KSeFInvoice) -> None:
         xml = await generator.generate(sample_invoice)
         assert _NS3 in xml
         # FA(2) namespace must NOT appear
@@ -154,9 +152,7 @@ class TestFA3Generator:
         assert "DataWytworzenieFa" not in xml
 
     @pytest.mark.asyncio
-    async def test_seller_nip(
-        self, generator: FA3Generator, sample_invoice: KSeFInvoice
-    ) -> None:
+    async def test_seller_nip(self, generator: FA3Generator, sample_invoice: KSeFInvoice) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<Podmiot1>" in xml
         assert "<NIP>5261040828</NIP>" in xml
@@ -191,9 +187,7 @@ class TestFA3Generator:
         assert "<KodWaluty>PLN</KodWaluty>" in xml
 
     @pytest.mark.asyncio
-    async def test_vat_fields(
-        self, generator: FA3Generator, sample_invoice: KSeFInvoice
-    ) -> None:
+    async def test_vat_fields(self, generator: FA3Generator, sample_invoice: KSeFInvoice) -> None:
         xml = await generator.generate(sample_invoice)
         assert "<P_13_1>2000.00</P_13_1>" in xml
         assert "<P_14_1>460.00</P_14_1>" in xml

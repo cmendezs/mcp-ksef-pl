@@ -391,9 +391,7 @@ def _wiersz_lines(invoice: KSeFInvoice) -> str:
     rows: list[str] = []
     for line in invoice.line_items:
         rate_str = (
-            str(int(line.tax_rate))
-            if line.tax_rate == int(line.tax_rate)
-            else str(line.tax_rate)
+            str(int(line.tax_rate)) if line.tax_rate == int(line.tax_rate) else str(line.tax_rate)
         )
         exempt_code = _ksef_exempt_code(line.tax_category)
         row_lines = [
@@ -407,9 +405,7 @@ def _wiersz_lines(invoice: KSeFInvoice) -> str:
             f"  <P_12>{xml_escape(rate_str)}</P_12>",
         ]
         if exempt_code:
-            row_lines.append(
-                f"  <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>"
-            )
+            row_lines.append(f"  <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>")
         row_lines.append("</FaWiersz>")
         rows.append("\n".join(row_lines))
     return "\n".join(rows)
@@ -490,8 +486,7 @@ def _fa3_correction_block(ref: KSeFCorrectionRef) -> str:
     if ref.numer_ksef:
         lines.append("  <NrKSeF>1</NrKSeF>")
         lines.append(
-            f"  <NrKSeFFaKorygowanej>{xml_escape(ref.nr_ksef_fa_korygowanej)}"
-            "</NrKSeFFaKorygowanej>"
+            f"  <NrKSeFFaKorygowanej>{xml_escape(ref.nr_ksef_fa_korygowanej)}</NrKSeFFaKorygowanej>"
         )
     else:
         lines.append("  <NrKSeFN>1</NrKSeFN>")
@@ -530,9 +525,7 @@ def _fa3_platnosc_block(
     parts.append("  <FormaPlatnosci>6</FormaPlatnosci>")
     if has_iban:
         parts.append(
-            f"  <RachunekBankowy>\n"
-            f"    <NrRB>{xml_escape(pm.iban)}</NrRB>\n"
-            f"  </RachunekBankowy>"
+            f"  <RachunekBankowy>\n    <NrRB>{xml_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
         )
     if link_do_platnosci:
         parts.append(f"  <LinkDoPlatnosci>{xml_escape(link_do_platnosci)}</LinkDoPlatnosci>")
@@ -700,5 +693,3 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
             raise
         except Exception as exc:
             raise DocumentGenerationError(f"FA(3) generation failed: {exc}") from exc
-
-

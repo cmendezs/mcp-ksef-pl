@@ -25,20 +25,22 @@ class TestSubjectTypeNormalization:
     ) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value={"invoices": []},
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value={"invoices": []},
         ) as mock_query:
             await manager.search_documents({"subject_type": "subject1"})
         assert mock_query.call_args[0][0]["subjectType"] == "Subject1"
 
     @pytest.mark.asyncio
-    async def test_subject_authorized_round_trips(
-        self, test_settings: KSeFSettings
-    ) -> None:
+    async def test_subject_authorized_round_trips(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value={"invoices": []},
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value={"invoices": []},
         ) as mock_query:
             await manager.search_documents({"subject_type": "SubjectAuthorized"})
         assert mock_query.call_args[0][0]["subjectType"] == "SubjectAuthorized"
@@ -49,16 +51,16 @@ class TestSubjectTypeNormalization:
     ) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value={"invoices": []},
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value={"invoices": []},
         ) as mock_query:
             await manager.search_documents({"subject_type": "subjectauthorized"})
         assert mock_query.call_args[0][0]["subjectType"] == "SubjectAuthorized"
 
     @pytest.mark.asyncio
-    async def test_unrecognised_subject_type_raises(
-        self, test_settings: KSeFSettings
-    ) -> None:
+    async def test_unrecognised_subject_type_raises(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with pytest.raises(PlatformError, match="Unrecognised subject_type"):
             await manager.search_documents({"subject_type": "subject9"})
@@ -67,8 +69,10 @@ class TestSubjectTypeNormalization:
     async def test_default_is_subject1(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with patch.object(
-            manager._client, "query_invoices",
-            new_callable=AsyncMock, return_value={"invoices": []},
+            manager._client,
+            "query_invoices",
+            new_callable=AsyncMock,
+            return_value={"invoices": []},
         ) as mock_query:
             await manager.search_documents({})
         assert mock_query.call_args[0][0]["subjectType"] == "Subject1"

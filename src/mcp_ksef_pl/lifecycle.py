@@ -196,9 +196,7 @@ class KSeFClient(BaseEInvoicingClient):
 
     async def query_invoices(self, payload: dict[str, Any]) -> dict[str, Any]:
         """POST /invoices/query/metadata — search invoice metadata."""
-        response = await self._request(
-            "POST", "/invoices/query/metadata", json=payload
-        )
+        response = await self._request("POST", "/invoices/query/metadata", json=payload)
         return response.json()  # type: ignore[no-any-return]
 
     async def healthcheck(self) -> dict[str, Any]:
@@ -290,9 +288,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
 
         form_code: dict[str, str] | None = metadata.get("form_code")
 
-        logger.info(
-            "Submitting invoice to KSeF v2 (%s)", self._settings.environment
-        )
+        logger.info("Submitting invoice to KSeF v2 (%s)", self._settings.environment)
 
         # Step 1: fetch the MF public key for symmetric key encryption.
         certs = await self._client.get_public_key_certificates()
@@ -326,9 +322,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
 
             # Step 4: encrypt and send the invoice.
             send_payload = envelope.build_send_payload(xml)
-            invoice_ref = await self._client.send_invoice_to_session(
-                session_ref, send_payload
-            )
+            invoice_ref = await self._client.send_invoice_to_session(session_ref, send_payload)
             logger.info("Invoice sent to session %s: invoiceRef=%s", session_ref, invoice_ref)
 
             # Step 5: close the session (non-fatal if this fails — invoice is already sent).
@@ -336,9 +330,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                 await self._client.close_online_session(session_ref)
                 logger.info("KSeF session closed: %s", session_ref)
             except Exception as exc:
-                logger.warning(
-                    "Session close failed (non-fatal, invoice was accepted): %s", exc
-                )
+                logger.warning("Session close failed (non-fatal, invoice was accepted): %s", exc)
         finally:
             # Drop AES key references regardless of outcome to minimise the
             # window during which key material is reachable in process memory.
@@ -377,12 +369,8 @@ class KSeFLifecycleManager(BaseLifecycleManager):
         date_type    : str  "Issue" | "Invoicing" | "PermanentStorage"
                             (default "Invoicing")
         """
-        date_from = _to_iso_datetime(
-            filters.get("date_from", str(date.today())), end=False
-        )
-        date_to = _to_iso_datetime(
-            filters.get("date_to", str(date.today())), end=True
-        )
+        date_from = _to_iso_datetime(filters.get("date_from", str(date.today())), end=False)
+        date_to = _to_iso_datetime(filters.get("date_to", str(date.today())), end=True)
         subject_type = _normalize_subject_type(filters.get("subject_type", "Subject1"))
         date_type = filters.get("date_type", "Invoicing")
 

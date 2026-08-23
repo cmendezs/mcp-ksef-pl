@@ -33,6 +33,4 @@ class PeppolUBLGenerator(BaseDocumentGenerator[KSeFInvoice]):
         except DocumentGenerationError:
             raise
         except Exception as exc:
-            raise DocumentGenerationError(
-                f"Peppol UBL generation failed: {exc}"
-            ) from exc
+            raise DocumentGenerationError(f"Peppol UBL generation failed: {exc}") from exc

@@ -116,8 +116,12 @@ class FA2Validator(BaseDocumentValidator):
         metadata: dict[str, object] = {"schema_version": _FA2_SCHEMA_VERSION}
 
         _xsd_validate(
-            xml_content, self.get_schema_path(), _FA2_SCHEMA_VERSION,
-            errors, warnings, metadata,
+            xml_content,
+            self.get_schema_path(),
+            _FA2_SCHEMA_VERSION,
+            errors,
+            warnings,
+            metadata,
         )
         errors.extend(self._check_business_rules(xml_content))
 
@@ -193,8 +197,12 @@ class FA3Validator(BaseDocumentValidator):
         metadata: dict[str, object] = {"schema_version": _FA3_SCHEMA_VERSION}
 
         _xsd_validate(
-            xml_content, self.get_schema_path(), _FA3_SCHEMA_VERSION,
-            errors, warnings, metadata,
+            xml_content,
+            self.get_schema_path(),
+            _FA3_SCHEMA_VERSION,
+            errors,
+            warnings,
+            metadata,
         )
         errors.extend(self._check_business_rules(xml_content))
 
