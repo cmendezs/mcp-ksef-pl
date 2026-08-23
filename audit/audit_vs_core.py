@@ -558,7 +558,10 @@ def run_check_5() -> CheckResult:
                         message=(
                             "Environment variant defined."
                             if env in actual_envs
-                            else f"Required KSeF environment '{env}' missing from KSeFEnvironment enum."
+                            else (
+                                f"Required KSeF environment '{env}' missing "
+                                "from KSeFEnvironment enum."
+                            )
                         ),
                     )
                 )
@@ -781,7 +784,9 @@ def run_check_6() -> CheckResult:
                 tag="[SKIP]",
                 severity=SEVERITY_OK,
                 symbol="mcp_ksef_pl",
-                message="Package source directory not found; skipping parallel-implementation scan.",
+                message=(
+                    "Package source directory not found; skipping parallel-implementation scan."
+                ),
             )
         )
         return result
