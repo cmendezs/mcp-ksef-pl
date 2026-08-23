@@ -27,36 +27,69 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Install package + dev dependencies
-        run: uv sync --all-extras
-
-      - name: Lint with ruff
-        run: uv run ruff check src/mcp_ksef_pl/ tests/ audit/
+      - name: Install dependencies
+        run: uv sync --all-extras --no-sources
 
       - name: Run tests
         run: uv run pytest --tb=short
 
-  # ── Pre-publish audit ──────────────────────────────────────────────────────
-  audit:
-    name: Pre-publish audit vs mcp-einvoicing-core
-    needs: test
+  # ── Lint & type check ────────────────────────────────────────────────────────
+  lint:
+    name: Lint & type check
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
-      - name: Install package + dev dependencies
-        run: uv sync --all-extras
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --all-extras --no-sources
+
+      - name: Ruff check
+        run: uv run ruff check src/mcp_ksef_pl/ tests/ audit/
+
+      - name: Ruff format check
+        run: uv run ruff format --check src/mcp_ksef_pl/ tests/ audit/
+
+      - name: Mypy
+        run: uv run mypy src/mcp_ksef_pl
+        continue-on-error: true  # Non-blocking: 39 pre-existing type errors, tracked separately
+
+  # ── Pre-publish audit ──────────────────────────────────────────────────────
+  audit:
+    name: Pre-publish audit vs mcp-einvoicing-core
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        # --no-sources: resolve mcp-einvoicing-core from PyPI in this standalone repo.
+        # --upgrade: audit against the latest compatible core release, not whatever
+        # the committed uv.lock happens to pin.
+        run: uv sync --all-extras --no-sources --upgrade
 
       - name: Run pre-publish audit
         # Exit code 2 = blocking failures → job fails
