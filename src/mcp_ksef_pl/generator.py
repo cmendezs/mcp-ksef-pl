@@ -144,24 +144,44 @@ def _vat_summary_fields(summaries: list[EN16931Tax]) -> str:
     return "\n".join(f"<{k}>{v}</{k}>" for k, v in fields.items())
 
 
-def _payment_block(invoice: KSeFInvoice) -> str:
-    """Return raw payment fields for a payment-bearing invoice.
+def _fa2_platnosc_block(invoice: KSeFInvoice) -> str:
+    """Build an optional <Platnosc> block for FA(2) when IBAN or due_date is present.
 
-    KNOWN GAP (uncovered by the PL-6.3 packaging fix, out of scope for this
-    release): <P_6> is not a valid FA(2)/FA(3) element and <RachunekBankowy>
-    must be nested inside a <Platnosc> block (see _fa3_platnosc_block for the
-    FA(3) equivalent). FA2Generator does not call this helper's output into a
-    conformant position; tracked as a follow-up finding since it is not
-    exercised by the current KSeFInvoice fixtures (no due_date/payment_means).
+    XSD <Platnosc> sequence (verified against schemat_FA(2)_v1-0E.xsd): it is a
+    direct sibling of <FaWiersz>, positioned after the invoice lines (Zaplacono-choice
+    not emitted here), TerminPlatnosci, FormaPlatnosci-choice, RachunekBankowy,
+    RachunekBankowyFaktora, Skonto — identical shape to FA(3)'s <Platnosc>
+    (see _fa3_platnosc_block), minus the FA(3)-only LinkDoPlatnosci/IPKSeF elements,
+    which do not exist in the FA(2) schema. TerminPlatnosci only contains
+    Termin/TerminOpis — FormaPlatnosci is a sibling element after TerminPlatnosci,
+    not nested inside it. FormaPlatnosci=6 (przelew bankowy) is the standard
+    default for B2B invoices.
+
+    PL-PAY-1: previously this invoice-level due_date was (mis)emitted as a raw
+    <P_6> field with an unwrapped <RachunekBankowy> spliced in before
+    <RodzajFaktury>. <P_6> does exist in the schema, but it means "date of
+    supply/service completion", not "payment due date" — due_date belongs in
+    <Platnosc>/<TerminPlatnosci> instead.
     """
-    if not invoice.payment_means:
-        return ""
     pm = invoice.payment_means
-    parts = []
-    if invoice.due_date:
-        parts.append(f"<P_6>{xml_escape(str(invoice.due_date))}</P_6>")
-    if pm.iban:
-        parts.append(f"<RachunekBankowy><NrRB>{xml_escape(pm.iban)}</NrRB></RachunekBankowy>")
+    has_iban = pm and pm.iban
+    has_due_date = invoice.due_date is not None
+    if not has_iban and not has_due_date:
+        return ""
+
+    parts = ["<Platnosc>"]
+    if has_due_date:
+        parts.append(
+            f"  <TerminPlatnosci>\n"
+            f"    <Termin>{xml_escape(str(invoice.due_date))}</Termin>\n"
+            f"  </TerminPlatnosci>"
+        )
+    parts.append("  <FormaPlatnosci>6</FormaPlatnosci>")
+    if has_iban:
+        parts.append(
+            f"  <RachunekBankowy>\n    <NrRB>{xml_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
+        )
+    parts.append("</Platnosc>")
     return "\n".join(parts)
 
 
@@ -181,7 +201,7 @@ class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
         try:
             now_utc = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             vat_fields = _vat_summary_fields(invoice.tax_lines or [])
-            payment = _payment_block(invoice)
+            platnosc = _fa2_platnosc_block(invoice)
 
             parts: list[str] = [
                 '<?xml version="1.0" encoding="UTF-8"?>',
@@ -203,15 +223,15 @@ class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
             if vat_fields:
                 for vl in vat_fields.splitlines():
                     parts.append(f"    {vl}")
-            if payment:
-                for pl in payment.splitlines():
-                    parts.append(f"    {pl}")
             for al in _adnotacje().splitlines():
                 parts.append(f"    {al}")
             parts.append("    <RodzajFaktury>VAT</RodzajFaktury>")
             if invoice.line_items:
                 for wl in _wiersz_lines(invoice).splitlines():
                     parts.append(f"    {wl}")
+            if platnosc:
+                for pl in platnosc.splitlines():
+                    parts.append(f"    {pl}")
             parts.append("  </Fa>")
             if invoice.note:
                 parts += [

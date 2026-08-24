@@ -41,6 +41,10 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.8.1] - 2026-08-24
+#### Fixed
+- **[PL-PAY-1]** FA(2) `<Platnosc>` block structural conformance, deferred as a known gap since v0.5.0. `_payment_block` emitted a non-existent invoice-level `<P_6>` for `due_date` and an unwrapped `<RachunekBankowy>` spliced in before `<RodzajFaktury>`; `due_date`/IBAN now emit inside a `<Platnosc>` block (`TerminPlatnosci`, `FormaPlatnosci`, `RachunekBankowy`) positioned after `<FaWiersz>`, mirroring FA(3)'s already-correct shape (`_fa3_platnosc_block`). Added `tests/test_fa2_xsd_conformance.py` (payment-bearing FA(2) fixture, generate→XSD-validate) plus a structural unit test, since `sample_invoice` alone (no `due_date`/`payment_means`) did not exercise this path.
+
 ### [0.8.0] - 2026-08-24
 #### Changed
 - **[core v1.20.0]** `peppol_send` now emits a real `wsse:Security` message signature. Core's AS4 transport client's `_apply_message_signature` previously computed a signature and discarded it, sending unsigned outbound messages. Wire-level behavior change, not independently validated against a live sandbox Peppol AP at time of publish — the signing code is shared core logic, not PL-specific, so no per-package sandbox gate was required.

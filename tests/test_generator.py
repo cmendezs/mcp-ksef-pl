@@ -122,6 +122,53 @@ class TestFA2Generator:
             with pytest.raises(DocumentGenerationError, match="Unknown standard-category"):
                 await generator.generate(invoice)
 
+    @pytest.mark.asyncio
+    async def test_payment_block_nests_inside_platnosc(
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        """PL-PAY-1: due_date/IBAN must nest inside <Platnosc>, not a raw <P_6>."""
+        from datetime import date
+
+        from mcp_einvoicing_core.en16931 import EN16931PaymentMeans
+
+        invoice = sample_invoice.model_copy(
+            update={
+                "due_date": date(2024, 4, 15),
+                "payment_means": EN16931PaymentMeans(
+                    type_code="58", iban="PL61109010140000071219812874"
+                ),
+            }
+        )
+        xml = await generator.generate(invoice)
+
+        assert "<P_6>" not in xml
+        assert "<Platnosc>" in xml
+        platnosc_start = xml.index("<Platnosc>")
+        platnosc_end = xml.index("</Platnosc>")
+        platnosc_block = xml[platnosc_start:platnosc_end]
+
+        assert "<TerminPlatnosci>" in platnosc_block
+        assert "<Termin>2024-04-15</Termin>" in platnosc_block
+        assert "<RachunekBankowy>" in platnosc_block
+        assert "<NrRB>PL61109010140000071219812874</NrRB>" in platnosc_block
+
+        # FormaPlatnosci must NOT be nested inside TerminPlatnosci (mirrors PL-2.7 for FA3).
+        termin_start = xml.index("<TerminPlatnosci>")
+        termin_end = xml.index("</TerminPlatnosci>")
+        assert "FormaPlatnosci" not in xml[termin_start:termin_end]
+        assert "<FormaPlatnosci>6</FormaPlatnosci>" in xml
+        assert termin_end < xml.index("<FormaPlatnosci>")
+
+        # <Platnosc> is a sibling of <FaWiersz>, positioned after the invoice lines.
+        assert xml.index("<FaWiersz>") < platnosc_start
+
+    @pytest.mark.asyncio
+    async def test_no_payment_data_omits_platnosc(
+        self, generator: FA2Generator, sample_invoice: KSeFInvoice
+    ) -> None:
+        xml = await generator.generate(sample_invoice)
+        assert "<Platnosc>" not in xml
+
 
 class TestFA3Generator:
     @pytest.fixture

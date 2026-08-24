@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-08-24
+
+### Fixed
+- **PL-PAY-1:** FA(2) `<Platnosc>` (payment) block was structurally invalid. `_payment_block` emitted a non-existent invoice-level `<P_6>` element for `due_date` and an unwrapped `<RachunekBankowy>` spliced in before `<RodzajFaktury>`. `<P_6>` exists in the FA(2) schema but means "date of supply/service completion", not "payment due date" — it was also positioned wrong even on that reading. `due_date` and IBAN now emit inside a `<Platnosc>` block (`TerminPlatnosci`, `FormaPlatnosci`, `RachunekBankowy`), positioned as a sibling of `<FaWiersz>` after the invoice lines, mirroring `_fa3_platnosc_block`'s already-correct FA(3) shape. Not caught by v0.5.0's XSD-conformance tests because `sample_invoice` had no `due_date`/`payment_means`; added `tests/test_fa2_xsd_conformance.py` (payment-bearing FA(2) fixture, generate→XSD-validate) plus a structural unit test in `tests/test_generator.py`.
+
+---
+
 ## [0.8.0] - 2026-08-24
 
 ### Changed
