@@ -41,6 +41,16 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.8.0] - 2026-08-24
+#### Changed
+- **[core v1.20.0]** `peppol_send` now emits a real `wsse:Security` message signature. Core's AS4 transport client's `_apply_message_signature` previously computed a signature and discarded it, sending unsigned outbound messages. Wire-level behavior change, not independently validated against a live sandbox Peppol AP at time of publish — the signing code is shared core logic, not PL-specific, so no per-package sandbox gate was required.
+- Lower-bound pin on `mcp-einvoicing-core` raised to `>=1.20.0` (was `>=1.19.0`).
+
+#### Added
+- New `xslt2` extra: `mcp-einvoicing-core[xslt2]>=1.20.0`. This package had no `[xslt2]` extra before — it is required by the new EUSR/TSR reporting and MLS tools below. `saxonche` also added to the `dev` extra so reporting/MLS tests run.
+- Mounted three new opt-in core plugins in `server.py`, alongside the existing Peppol tool plugin: `register_peppol_reporting_tools` (`validate_eusr_report`, `validate_tsr_report`; requires `[xslt2]`), `register_peppol_mls_tools` (`validate_mls_message`, `build_mls_message`; requires `[xslt2]`), and `register_en16931_codelist_tools` (13 `list_*`/`check_*` pairs; requires `EINVOICING_EN16931_CODELIST_DIR`). `peppol_directory_search` arrives automatically via the existing `register_peppol_tools` mount.
+- Server-registration smoke test asserting the new tools register.
+
 ### [0.7.0] - 2026-08-21
 #### Changed
 - **[ARCH-CONVERGE-PL]** `server.py` converted from a raw `FastMCP` instance to `EInvoicingMCPServer`/`register_plugin`, matching the other country packages. Mounts the shared core Peppol tool plugin (`mcp_einvoicing_core.peppol.tools.register_peppol_tools`) with a Poland-specific identifier adapter that normalizes a bare NIP to the `9945:<digits>` Peppol scheme (`PL:VAT`, per the OpenPeppol eDEC Participant Identifier Schemes code list v9.7). PL gains 12 new Peppol network tools it did not have before: `peppol_lookup_participant`, `peppol_get_service_endpoint`, `resolve_peppol_dns`, `peppol_send`, and 8 eDEC codelist tools.
