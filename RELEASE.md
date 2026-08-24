@@ -41,6 +41,12 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.8.2] - 2026-08-24
+#### Fixed
+- `FA2Parser` line-item xpath looked for a `<FaWiersze>` wrapper around `<FaWiersz>` rows that does not exist in the FA(2) schema (`<FaWiersz>` is a direct child of `<Fa>`), so `parse()` always returned an empty `lines` list for any real FA(2) XML, including this package's own generator output. Fixed to read `<FaWiersz>` directly.
+- `due_date` was reading `<P_6>` (date of supply/delivery/service completion), not the payment due date, which lives in `<Platnosc>/<TerminPlatnosci>/<Termin>` (same schema fact already applied to `FA2Generator` in the v0.8.1 `PL-PAY-1` fix). `<P_6>` is now parsed separately under `supply_date`.
+- Added `tests/test_parser.py` — no test file previously existed for `FA2Parser`, which is how both bugs went unnoticed despite `parse_fa2_invoice` being a live registered MCP tool.
+
 ### [0.8.1] - 2026-08-24
 #### Fixed
 - **[PL-PAY-1]** FA(2) `<Platnosc>` block structural conformance, deferred as a known gap since v0.5.0. `_payment_block` emitted a non-existent invoice-level `<P_6>` for `due_date` and an unwrapped `<RachunekBankowy>` spliced in before `<RodzajFaktury>`; `due_date`/IBAN now emit inside a `<Platnosc>` block (`TerminPlatnosci`, `FormaPlatnosci`, `RachunekBankowy`) positioned after `<FaWiersz>`, mirroring FA(3)'s already-correct shape (`_fa3_platnosc_block`). Added `tests/test_fa2_xsd_conformance.py` (payment-bearing FA(2) fixture, generate→XSD-validate) plus a structural unit test, since `sample_invoice` alone (no `due_date`/`payment_means`) did not exercise this path.
