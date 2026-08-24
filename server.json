@@ -6,12 +6,12 @@
     "url": "https://github.com/cmendezs/mcp-ksef-pl",
     "source": "github"
   },
-  "version": "0.8.1",
+  "version": "0.8.2",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "mcp-ksef-pl",
-      "version": "0.8.1",
+      "version": "0.8.2",
       "transport": {
         "type": "stdio"
       },

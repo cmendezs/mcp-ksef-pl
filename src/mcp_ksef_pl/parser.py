@@ -72,7 +72,7 @@ class FA2Parser(BaseDocumentParser):
         fa = fa_el[0] if fa_el else root
 
         lines = []
-        for row in fa.xpath("fa:FaWiersze/fa:FaWiersz", namespaces=ns):
+        for row in fa.xpath("fa:FaWiersz", namespaces=ns):
             lines.append(
                 {
                     "line_number": _text(row, "fa:NrWierszaFa", ns),
@@ -94,7 +94,8 @@ class FA2Parser(BaseDocumentParser):
                 "currency": _text(fa, "fa:KodWaluty", ns),
                 "date": _text(fa, "fa:P_1", ns),
                 "number": _text(fa, "fa:P_2", ns),
-                "due_date": _text(fa, "fa:P_6", ns),
+                "supply_date": _text(fa, "fa:P_6", ns),
+                "due_date": _text(fa, "fa:Platnosc/fa:TerminPlatnosci/fa:Termin", ns),
                 "net_23": _text(fa, "fa:P_13_1", ns),
                 "vat_23": _text(fa, "fa:P_14_1", ns),
                 "net_8": _text(fa, "fa:P_13_2", ns),
