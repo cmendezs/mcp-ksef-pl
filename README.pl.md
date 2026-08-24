@@ -68,7 +68,9 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 
 ### Narzędzia sieci Peppol
 
-Wyszukiwanie uczestnika Peppol, wyszukiwanie punktu usługowego, diagnostyka wyłącznie DNS, wysyłka AS4 oraz narzędzia list kodów OpenPeppol eDEC są dostarczane przez współdzielony wtyczkowy zestaw narzędzi Peppol z rdzenia (`mcp_einvoicing_core.peppol.tools.register_peppol_tools`), zamontowany w `server.py` z adapterem identyfikatora specyficznym dla Polski: goły NIP (np. `1234563218`) jest normalizowany do schematu Peppol `9945:<cyfry>` (`PL:VAT`, zgodnie z listą kodów OpenPeppol eDEC Participant Identifier Schemes); identyfikator już kwalifikowany schematem (np. `9945:1234563218`) przechodzi bez zmian. Użyj tych narzędzi, aby sprawdzić status rejestracji w PEF (polskim punkcie dostępowym Peppol dla fakturowania B2G w zamówieniach publicznych) przed użyciem `generate_peppol_invoice`.
+Wyszukiwanie uczestnika Peppol, wyszukiwanie punktu usługowego, diagnostyka wyłącznie DNS, wysyłka AS4, wyszukiwanie w katalogu Peppol Directory oraz narzędzia list kodów OpenPeppol eDEC są dostarczane przez współdzielony wtyczkowy zestaw narzędzi Peppol z rdzenia (`mcp_einvoicing_core.peppol.tools.register_peppol_tools`), zamontowany w `server.py` z adapterem identyfikatora specyficznym dla Polski: goły NIP (np. `1234563218`) jest normalizowany do schematu Peppol `9945:<cyfry>` (`PL:VAT`, zgodnie z listą kodów OpenPeppol eDEC Participant Identifier Schemes); identyfikator już kwalifikowany schematem (np. `9945:1234563218`) przechodzi bez zmian. Użyj tych narzędzi, aby sprawdzić status rejestracji w PEF (polskim punkcie dostępowym Peppol dla fakturowania B2G w zamówieniach publicznych) przed użyciem `generate_peppol_invoice`.
+
+`peppol_send` od `mcp-einvoicing-core` v1.20.0 podpisuje wychodzące wiadomości prawdziwym podpisem `wsse:Security` (wcześniej obliczanym i odrzucanym — zobacz CHANGELOG.md v0.8.0).
 
 | Narzędzie | Opis |
 |-----------|------|
@@ -76,8 +78,25 @@ Wyszukiwanie uczestnika Peppol, wyszukiwanie punktu usługowego, diagnostyka wy�
 | `peppol_get_service_endpoint` | Pobiera punkt końcowy AS4 dla typu dokumentu uczestnika |
 | `resolve_peppol_dns` | Diagnostyka wyłącznie DNS (SML), niezależna od dostępności SMP |
 | `peppol_send` | Przesyła fakturę UBL/CII przez AS4 |
+| `peppol_directory_search` | Przeszukuje publiczny katalog Peppol Directory według uczestnika, nazwy, kraju lub typu dokumentu |
 | `list_participant_id_schemes`, `list_document_type_ids`, `list_process_ids`, `list_spis_use_case_ids` | Wyszukiwania w listach kodów OpenPeppol eDEC (wymagają `EINVOICING_PEPPOL_CODELIST_DIR`) |
 | `check_document_type_id_in_codelist`, `check_process_id_in_codelist`, `check_participant_id_scheme_in_codelist`, `get_peppol_codelist_version` | Sprawdzenia list kodów OpenPeppol eDEC i raportowanie wersji |
+
+Pełną dokumentację parametrów tych narzędzi znajdziesz w [README `mcp-einvoicing-core`](https://github.com/cmendezs/mcp-einvoicing-core#readme).
+
+---
+
+### Narzędzia raportowania i statusu Peppol
+
+Dodane w v0.8.0 poprzez trzy opcjonalne wtyczki rdzenia, montowane bezwarunkowo w `server.py`. Każda zwraca czytelny błąd przy wywołaniu (nie przy rejestracji), jeśli brakuje jej dodatku lub katalogu danych.
+
+| Narzędzie | Wtyczka | Opis |
+|-----------|---------|------|
+| `validate_eusr_report` | `register_peppol_reporting_tools` | Waliduje End User Statistics Report (XSD, następnie Schematron). Wymaga dodatku `[xslt2]`. |
+| `validate_tsr_report` | `register_peppol_reporting_tools` | Waliduje Transaction Statistics Report (XSD, następnie Schematron). Wymaga dodatku `[xslt2]`. |
+| `validate_mls_message` | `register_peppol_mls_tools` | Waliduje dokument Message Level Status (podzbiór UBL `ApplicationResponse-2`). Wymaga dodatku `[xslt2]`. |
+| `build_mls_message` | `register_peppol_mls_tools` | Buduje odpowiedź MLS na poziomie dokumentu. Wymaga dodatku `[xslt2]`. |
+| 13 par `list_*`/`check_*`, `get_en16931_codelist_version` | `register_en16931_codelist_tools` | Wyszukiwania/sprawdzenia semantycznych list kodów EN 16931 (jednostki, kategorie VAT itd.). Wymagają `EINVOICING_EN16931_CODELIST_DIR`. |
 
 Pełną dokumentację parametrów tych narzędzi znajdziesz w [README `mcp-einvoicing-core`](https://github.com/cmendezs/mcp-einvoicing-core#readme).
 
@@ -117,6 +136,9 @@ uv sync --all-extras
 | `KSEF_TIMEOUT` | `30` | Limit czasu żądań HTTP w sekundach |
 | `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Wymusza przypinanie SPKI SHA-256 dla certyfikatu szyfrującego MF. Nieaktywne, dopóki odciski palca nie zostaną skonfigurowane dla danego środowiska, nawet jeśli ustawione na `true` |
 | `EINVOICING_PEPPOL_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię list kodów OpenPeppol eDEC, wymagany przez narzędzia list kodów Peppol (nie dołączony do tego pakietu; zobacz README `mcp-einvoicing-core`) |
+| `EINVOICING_EN16931_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię semantycznych list kodów EN 16931 CEF "Digital Building Blocks", wymagany przez narzędzia list kodów EN 16931 (nie dołączony; zobacz README `mcp-einvoicing-core`) |
+
+Narzędzia raportowania EUSR/TSR oraz MLS dodatkowo wymagają dodatku `[xslt2]` (`pip install "mcp-ksef-pl[xslt2]"`) do walidacji Schematron.
 
 ---
 

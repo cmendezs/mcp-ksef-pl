@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-ksef-pl"
-version = "0.7.0"
+version = "0.8.0"
 description = "MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Office/Business :: Financial",
 ]
 dependencies = [
-    "mcp-einvoicing-core>=1.19.0,<2.0.0",
+    "mcp-einvoicing-core>=1.20.0,<2.0.0",
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
@@ -31,6 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+xslt2 = ["mcp-einvoicing-core[xslt2]>=1.20.0"]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -38,6 +39,7 @@ dev = [
     "mypy>=1.8.0",
     "ruff>=0.3.0",
     "lxml-stubs>=0.5.0",
+    "saxonche>=12.4.0",
 ]
 
 [project.scripts]
