@@ -316,7 +316,9 @@ uv run pytest tests/ -v
 | 🇩🇪 Niemcy | [mcp-einvoicing-de](https://github.com/cmendezs/mcp-einvoicing-de) |
 | 🇮🇹 Włochy | [mcp-fattura-elettronica-it](https://github.com/cmendezs/mcp-fattura-elettronica-it) |
 | 🇵🇱 Polska | [mcp-ksef-pl](https://github.com/cmendezs/mcp-ksef-pl) |
+| 🇸🇬 Singapur | [mcp-invoicenow-sg](https://github.com/cmendezs/mcp-invoicenow-sg) |
 | 🇪🇸 Hiszpania | [mcp-facturacion-electronica-es](https://github.com/cmendezs/mcp-facturacion-electronica-es) |
+| 🇦🇪 Zjednoczone Emiraty Arabskie | [mcp-einvoicing-ae](https://github.com/cmendezs/mcp-einvoicing-ae) |
 
 ---
 
