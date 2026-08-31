@@ -58,8 +58,9 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # (PL's own NIP/REGON checks in party_validator.py return their own result type).
     # scrub() (LLM-facing IBAN/BIC redaction) is not yet wired into any PL tool
     # handler — same gap as every other country package in this workspace.
-    # ABC/Any/BaseModel/FastMCP/Field/Generic/TypeVar/abstractmethod are
-    # stdlib/Pydantic/FastMCP imports used internally by base_server.py itself.
+    # ABC/Any/BaseModel/Callable/FastMCP/Field/Generic/TypeVar/abstractmethod are
+    # stdlib/Pydantic/FastMCP imports used internally by base_server.py itself
+    # (Callable backs the module-private ToolRegistrationFn type alias).
     "mcp_einvoicing_core.base_server": {
         "BaseDocumentGenerator",
         "BaseDocumentParser",
@@ -71,6 +72,7 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "ABC",
         "Any",
         "BaseModel",
+        "Callable",
         "FastMCP",
         "Field",
         "Generic",
@@ -136,9 +138,9 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # AuthenticationError is a cross-module re-export of exceptions.AuthenticationError,
     # already excluded above for the same reason. BaseEInvoicingConfig is unused —
     # PL's own config.py (KSeFSettings) defines its BaseSettings config directly.
-    # Any/BaseModel/BaseSettings/Enum/Field/Path/field_validator/
+    # Any/BaseModel/BaseSettings/Enum/Field/Path/StrEnum/field_validator/
     # parsedate_to_datetime/urlparse are stdlib/Pydantic imports used internally
-    # by http_client.py itself.
+    # by http_client.py itself (StrEnum backs the module-private AuthMode enum).
     "mcp_einvoicing_core.http_client": {
         "OAuthConfig",
         "TokenCache",
@@ -159,6 +161,7 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "Enum",
         "Field",
         "Path",
+        "StrEnum",
         "field_validator",
         "parsedate_to_datetime",
         "urlparse",
@@ -190,8 +193,9 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
     # gains live Peppol network directory lookups (peppol_lookup_participant,
     # resolve_peppol_dns, etc.) without PL's own code importing the SMP
     # participant-lookup client or its supporting types directly — the mounted
-    # plugin does that internally. Enum/dataclass/field are stdlib imports used
-    # internally by peppol.py itself.
+    # plugin does that internally. Callable/Enum/StrEnum/dataclass/field are
+    # stdlib imports used internally by peppol.py itself (Callable types the
+    # optional allowlist_check parameter, StrEnum backs PeppolEnvironment).
     "mcp_einvoicing_core.peppol": {
         "PeppolEnvironment",
         "PeppolLookupResult",
@@ -202,7 +206,9 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         # PL's mounted core plugin exposes it as the resolve_peppol_dns tool, PL package
         # code itself has no direct call site
         "resolve_naptr",
+        "Callable",
         "Enum",
+        "StrEnum",
         "dataclass",
         "field",
     },
@@ -232,6 +238,12 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "ValidationMessage",
         "ValidationResult",
         "BaseXSDValidator",
+        # OVERRIDE-REASON: XSDValidator (core v1.20.0) is a generic concrete
+        # BaseXSDValidator for plain single-XSD validation; FA2Validator/
+        # FA3Validator already implement their own lxml-based multi-schema
+        # XSD check directly (see BaseXSDValidator note above), so the
+        # generic single-schema convenience class has no call site here.
+        "XSDValidator",
         "BaseJSONValidator",
         "SaxonSchematronValidator",
         "get_xslt_version",

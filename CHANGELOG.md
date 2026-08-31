@@ -56,6 +56,15 @@ Raises the core lower-bound pin to `>=1.28.0` (was `>=1.27.0`).
 
 ---
 
+## [0.8.2] - 2026-08-24
+
+### Fixed
+- `FA2Parser.parse()` looked for a `<FaWiersze>` wrapper around `<FaWiersz>` rows that does not exist in the FA(2) schema, so `lines` was always empty for any real FA(2) XML, including this package's own generator output. Fixed to read `<FaWiersz>` as a direct child of `<Fa>`.
+- `due_date` was reading `<P_6>` (date of supply/delivery/service completion), not the payment due date, which lives in `<Platnosc>/<TerminPlatnosci>/<Termin>` (same schema fact already applied to `FA2Generator` in the v0.8.1 `PL-PAY-1` fix). `<P_6>` is now parsed separately under `supply_date`.
+- Added `tests/test_parser.py` — no test file previously existed for `FA2Parser`, which is how both bugs went unnoticed despite `parse_fa2_invoice` being a live registered MCP tool.
+
+---
+
 ## [0.8.1] - 2026-08-24
 
 ### Fixed
