@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.3] - 2026-08-31
+
+### Fixed
+- **PL-DISC-1:** the FA(2)/FA(3) XML generators inserted seller/buyer/line-item
+  and note field values verbatim through `xml_escape()`, which only
+  neutralizes the 5 XML metacharacters. KSeF API v2.4.0 (PRD-live since
+  2026-07-16) rejects an otherwise schema-valid document containing a W3C
+  XML 1.0 Appendix C "discouraged" code point (C1 controls + DEL, certain
+  noncharacters) — a class of rejection the local XSD validator does not
+  catch. `generator.py` now routes every text field through a new `_escape()`
+  wrapper that applies `mcp_einvoicing_core.xml_utils.sanitize_xml_text()`
+  (core v1.27.0) before escaping, rejecting generation with
+  `DocumentGenerationError` rather than silently mutating a legally-binding
+  invoice field. Added `tests/test_generator.py::TestDiscouragedCharacterSanitization`.
+- Lower-bound pin on `mcp-einvoicing-core` raised to `>=1.27.0` (was `>=1.20.0`)
+  for `sanitize_xml_text`/`DiscouragedCharacterError`.
+
+---
+
 ## [0.8.1] - 2026-08-24
 
 ### Fixed

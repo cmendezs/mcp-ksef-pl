@@ -350,3 +350,34 @@ class TestFA3Generator:
         )
         xml = await generator.generate(sample_invoice, options=options)
         assert xml.index("<LinkDoPlatnosci>") < xml.index("<IPKSeF>")
+
+
+class TestDiscouragedCharacterSanitization:
+    """PL-DISC-1: KSeF API v2.4.0+ rejects W3C-discouraged code points that
+    xml_escape() alone lets through (mcp-einvoicing-core v1.27.0, sanitize_xml_text)."""
+
+    @pytest.mark.asyncio
+    async def test_fa2_note_with_discouraged_char_raises(self, sample_invoice: KSeFInvoice) -> None:
+        invoice = sample_invoice.model_copy(update={"note": "note with \x85 char"})
+        with pytest.raises(DocumentGenerationError):
+            await FA2Generator().generate(invoice)
+
+    @pytest.mark.asyncio
+    async def test_fa3_note_with_discouraged_char_raises(self, sample_invoice: KSeFInvoice) -> None:
+        invoice = sample_invoice.model_copy(update={"note": "note with \x85 char"})
+        with pytest.raises(DocumentGenerationError):
+            await FA3Generator().generate(invoice)
+
+    @pytest.mark.asyncio
+    async def test_seller_name_with_discouraged_char_raises(
+        self, sample_invoice: KSeFInvoice
+    ) -> None:
+        seller = sample_invoice.seller.model_copy(update={"name": "ACME\x7fSp. z o.o."})
+        invoice = sample_invoice.model_copy(update={"seller": seller})
+        with pytest.raises(DocumentGenerationError):
+            await FA2Generator().generate(invoice)
+
+    @pytest.mark.asyncio
+    async def test_clean_invoice_is_unaffected(self, sample_invoice: KSeFInvoice) -> None:
+        xml = await FA2Generator().generate(sample_invoice)
+        assert "<Podmiot1>" in xml

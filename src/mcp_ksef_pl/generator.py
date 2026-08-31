@@ -38,7 +38,8 @@ from mcp_einvoicing_core import (
     format_amount,
 )
 from mcp_einvoicing_core.en16931 import EN16931Tax
-from mcp_einvoicing_core.xml_utils import xml_escape
+from mcp_einvoicing_core.xml_utils import sanitize_xml_text
+from mcp_einvoicing_core.xml_utils import xml_escape as _raw_xml_escape
 
 from .models import (
     KSeFAttachment,
@@ -72,6 +73,19 @@ def _d(value: Decimal) -> str:
     return format_amount(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def _escape(text: str) -> str:
+    """xml_escape() with the KSeF discouraged-character policy applied first (PL-DISC-1).
+
+    KSeF API v2.4.0+ (PRD-live since 2026-07-16) rejects an otherwise
+    schema-valid document containing a W3C XML 1.0 Appendix C "discouraged"
+    code point; xml_escape() alone does not filter these. Reject rather than
+    strip, so a discouraged character in a seller/buyer/line-item field
+    surfaces as a generation failure instead of silently mutating a
+    legally-binding invoice value.
+    """
+    return _raw_xml_escape(sanitize_xml_text(text))
+
+
 def _ksef_exempt_code(category: str) -> str | None:
     """Map UNCL5305 VAT category to KSeF-specific exemption code for P_12_XII."""
     return _KSEF_EXEMPTION.get(category.upper())
@@ -87,11 +101,11 @@ def _party_block(party: KSeFParty, tag: str) -> str:
     """
     nip = party.nip or ""
 
-    id_block = f"<NIP>{xml_escape(nip)}</NIP>\n" if nip else ""
+    id_block = f"<NIP>{_escape(nip)}</NIP>\n" if nip else ""
     if party.eu_vat_country and party.eu_vat_id:
-        id_block += f"<KodUE>{xml_escape(party.eu_vat_country.upper())}</KodUE>\n"
-        id_block += f"<NrVatUE>{xml_escape(party.eu_vat_id)}</NrVatUE>\n"
-    id_block += f"<Nazwa>{xml_escape(party.name)}</Nazwa>\n"
+        id_block += f"<KodUE>{_escape(party.eu_vat_country.upper())}</KodUE>\n"
+        id_block += f"<NrVatUE>{_escape(party.eu_vat_id)}</NrVatUE>\n"
+    id_block += f"<Nazwa>{_escape(party.name)}</Nazwa>\n"
 
     addr_block = _adres_block(party)
     if addr_block:
@@ -173,13 +187,13 @@ def _fa2_platnosc_block(invoice: KSeFInvoice) -> str:
     if has_due_date:
         parts.append(
             f"  <TerminPlatnosci>\n"
-            f"    <Termin>{xml_escape(str(invoice.due_date))}</Termin>\n"
+            f"    <Termin>{_escape(str(invoice.due_date))}</Termin>\n"
             f"  </TerminPlatnosci>"
         )
     parts.append("  <FormaPlatnosci>6</FormaPlatnosci>")
     if has_iban:
         parts.append(
-            f"  <RachunekBankowy>\n    <NrRB>{xml_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
+            f"  <RachunekBankowy>\n    <NrRB>{_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
         )
     parts.append("</Platnosc>")
     return "\n".join(parts)
@@ -211,14 +225,14 @@ class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
                 '    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>',
                 "    <WariantFormularza>2</WariantFormularza>",
                 f"    <DataWytworzeniaFa>{now_utc}</DataWytworzeniaFa>",
-                f"    <SystemInfo>{xml_escape(_SYSTEM_INFO)}</SystemInfo>",
+                f"    <SystemInfo>{_escape(_SYSTEM_INFO)}</SystemInfo>",
                 "  </Naglowek>",
                 f"  {_party_block(invoice.seller, 'Podmiot1').strip()}",
                 f"  {_party_block(invoice.buyer, 'Podmiot2').strip()}",
                 "  <Fa>",
-                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>",
-                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>",
-                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>",
+                f"    <KodWaluty>{_escape(invoice.currency_code)}</KodWaluty>",
+                f"    <P_1>{_escape(str(invoice.invoice_date))}</P_1>",
+                f"    <P_2>{_escape(invoice.invoice_number)}</P_2>",
             ]
             if vat_fields:
                 for vl in vat_fields.splitlines():
@@ -237,7 +251,7 @@ class FA2Generator(BaseDocumentGenerator[KSeFInvoice]):
                 parts += [
                     "  <Stopka>",
                     "    <Informacje>",
-                    f"      <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>",
+                    f"      <StopkaFaktury>{_escape(invoice.note)}</StopkaFaktury>",
                     "    </Informacje>",
                     "  </Stopka>",
                 ]
@@ -264,14 +278,14 @@ def _adres_block(party: KSeFParty) -> str:
 
     lines = [
         "<Adres>",
-        f"  <KodKraju>{xml_escape(a.country_code.upper())}</KodKraju>",
-        f"  <AdresL1>{xml_escape(a.line_one)}</AdresL1>",
+        f"  <KodKraju>{_escape(a.country_code.upper())}</KodKraju>",
+        f"  <AdresL1>{_escape(a.line_one)}</AdresL1>",
     ]
     if a.region:
         # AdresL2 is optional — use for region/province when present
-        lines.append(f"  <AdresL2>{xml_escape(a.region)}</AdresL2>")
+        lines.append(f"  <AdresL2>{_escape(a.region)}</AdresL2>")
     if party.gln:
-        lines.append(f"  <GLN>{xml_escape(str(party.gln))}</GLN>")
+        lines.append(f"  <GLN>{_escape(str(party.gln))}</GLN>")
     lines.append("</Adres>")
     return "\n".join(lines)
 
@@ -282,11 +296,11 @@ def _fa3_seller_block(seller: KSeFParty) -> str:
 
     id_lines = []
     if nip:
-        id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
+        id_lines.append(f"<NIP>{_escape(nip)}</NIP>")
     if seller.eu_vat_country and seller.eu_vat_id:
-        id_lines.append(f"<KodUE>{xml_escape(seller.eu_vat_country.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(seller.eu_vat_id)}</NrVatUE>")
-    id_lines.append(f"<Nazwa>{xml_escape(seller.name)}</Nazwa>")
+        id_lines.append(f"<KodUE>{_escape(seller.eu_vat_country.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{_escape(seller.eu_vat_id)}</NrVatUE>")
+    id_lines.append(f"<Nazwa>{_escape(seller.name)}</Nazwa>")
 
     adres = _adres_block(seller)
 
@@ -312,13 +326,13 @@ def _fa3_buyer_block(buyer: KSeFParty) -> str:
 
     id_lines: list[str] = []
     if nip:
-        id_lines.append(f"<NIP>{xml_escape(nip)}</NIP>")
+        id_lines.append(f"<NIP>{_escape(nip)}</NIP>")
     elif buyer.eu_vat_country and buyer.eu_vat_id:
-        id_lines.append(f"<KodUE>{xml_escape(buyer.eu_vat_country.upper())}</KodUE>")
-        id_lines.append(f"<NrVatUE>{xml_escape(buyer.eu_vat_id)}</NrVatUE>")
+        id_lines.append(f"<KodUE>{_escape(buyer.eu_vat_country.upper())}</KodUE>")
+        id_lines.append(f"<NrVatUE>{_escape(buyer.eu_vat_id)}</NrVatUE>")
     else:
         id_lines.append("<BrakID>1</BrakID>")
-    id_lines.append(f"<Nazwa>{xml_escape(buyer.name)}</Nazwa>")
+    id_lines.append(f"<Nazwa>{_escape(buyer.name)}</Nazwa>")
 
     adres = _adres_block(buyer)
 
@@ -416,16 +430,16 @@ def _wiersz_lines(invoice: KSeFInvoice) -> str:
         exempt_code = _ksef_exempt_code(line.tax_category)
         row_lines = [
             "<FaWiersz>",
-            f"  <NrWierszaFa>{xml_escape(line.line_id)}</NrWierszaFa>",
-            f"  <P_7>{xml_escape(line.name)}</P_7>",
-            f"  <P_8A>{xml_escape(line.unit_code or 'szt')}</P_8A>",
+            f"  <NrWierszaFa>{_escape(line.line_id)}</NrWierszaFa>",
+            f"  <P_7>{_escape(line.name)}</P_7>",
+            f"  <P_8A>{_escape(line.unit_code or 'szt')}</P_8A>",
             f"  <P_8B>{format_amount(line.quantity)}</P_8B>",
             f"  <P_9A>{_d(line.unit_price)}</P_9A>",
             f"  <P_11>{_d(line.line_net_amount)}</P_11>",
-            f"  <P_12>{xml_escape(rate_str)}</P_12>",
+            f"  <P_12>{_escape(rate_str)}</P_12>",
         ]
         if exempt_code:
-            row_lines.append(f"  <P_12_XII>{xml_escape(exempt_code)}</P_12_XII>")
+            row_lines.append(f"  <P_12_XII>{_escape(exempt_code)}</P_12_XII>")
         row_lines.append("</FaWiersz>")
         rows.append("\n".join(row_lines))
     return "\n".join(rows)
@@ -437,12 +451,12 @@ def _fa3_podmiot3_block(entries: list[KSeFPodmiot3]) -> str:
     for p3 in entries:
         lines = ["<Podmiot3>", "  <DaneIdentyfikacyjne>"]
         if p3.nip:
-            lines.append(f"    <NIP>{xml_escape(p3.nip)}</NIP>")
-        lines.append(f"    <Nazwa>{xml_escape(p3.name)}</Nazwa>")
+            lines.append(f"    <NIP>{_escape(p3.nip)}</NIP>")
+        lines.append(f"    <Nazwa>{_escape(p3.name)}</Nazwa>")
         lines.append("  </DaneIdentyfikacyjne>")
-        lines.append(f"  <Rola>{xml_escape(p3.role_code)}</Rola>")
+        lines.append(f"  <Rola>{_escape(p3.role_code)}</Rola>")
         if p3.role_description:
-            lines.append(f"  <OpisRoli>{xml_escape(p3.role_description)}</OpisRoli>")
+            lines.append(f"  <OpisRoli>{_escape(p3.role_description)}</OpisRoli>")
         lines.append("</Podmiot3>")
         parts.append("\n".join(lines))
     return "\n".join(parts)
@@ -453,8 +467,8 @@ def _fa3_podmiot_upowazniony_block(pu: KSeFPodmiotUpowazniony) -> str:
     return (
         "<PodmiotUpowazniony>\n"
         "  <DaneIdentyfikacyjne>\n"
-        f"    <NIP>{xml_escape(pu.nip)}</NIP>\n"
-        f"    <Nazwa>{xml_escape(pu.name)}</Nazwa>\n"
+        f"    <NIP>{_escape(pu.nip)}</NIP>\n"
+        f"    <Nazwa>{_escape(pu.name)}</Nazwa>\n"
         "  </DaneIdentyfikacyjne>\n"
         "</PodmiotUpowazniony>"
     )
@@ -464,18 +478,18 @@ def _fa3_blok_danych(block: KSeFAttachment) -> str:
     """Build one <BlokDanych> element (ZNaglowek, MetaDane, Tekst, Tabela)."""
     lines: list[str] = ["<BlokDanych>"]
     if block.z_naglowek:
-        lines.append(f"  <ZNaglowek>{xml_escape(block.z_naglowek)}</ZNaglowek>")
+        lines.append(f"  <ZNaglowek>{_escape(block.z_naglowek)}</ZNaglowek>")
     for key, value in block.metadata:
         lines.append(
             f"  <MetaDane>\n"
-            f"    <ZKlucz>{xml_escape(key)}</ZKlucz>\n"
-            f"    <ZWartosc>{xml_escape(value)}</ZWartosc>\n"
+            f"    <ZKlucz>{_escape(key)}</ZKlucz>\n"
+            f"    <ZWartosc>{_escape(value)}</ZWartosc>\n"
             f"  </MetaDane>"
         )
     if block.text_paragraphs:
         lines.append("  <Tekst>")
         for paragraph in block.text_paragraphs:
-            lines.append(f"    <Akapit>{xml_escape(paragraph)}</Akapit>")
+            lines.append(f"    <Akapit>{_escape(paragraph)}</Akapit>")
         lines.append("  </Tekst>")
     lines.append("</BlokDanych>")
     return "\n".join(lines)
@@ -500,13 +514,13 @@ def _fa3_correction_block(ref: KSeFCorrectionRef) -> str:
     """
     lines: list[str] = [
         "<DaneFaKorygowanej>",
-        f"  <DataWystFaKorygowanej>{xml_escape(str(ref.data_wyst))}</DataWystFaKorygowanej>",
-        f"  <NrFaKorygowanej>{xml_escape(ref.nr_fa_korygowanej)}</NrFaKorygowanej>",
+        f"  <DataWystFaKorygowanej>{_escape(str(ref.data_wyst))}</DataWystFaKorygowanej>",
+        f"  <NrFaKorygowanej>{_escape(ref.nr_fa_korygowanej)}</NrFaKorygowanej>",
     ]
     if ref.numer_ksef:
         lines.append("  <NrKSeF>1</NrKSeF>")
         lines.append(
-            f"  <NrKSeFFaKorygowanej>{xml_escape(ref.nr_ksef_fa_korygowanej)}</NrKSeFFaKorygowanej>"
+            f"  <NrKSeFFaKorygowanej>{_escape(ref.nr_ksef_fa_korygowanej)}</NrKSeFFaKorygowanej>"
         )
     else:
         lines.append("  <NrKSeFN>1</NrKSeFN>")
@@ -539,18 +553,18 @@ def _fa3_platnosc_block(
     if has_due_date:
         parts.append(
             f"  <TerminPlatnosci>\n"
-            f"    <Termin>{xml_escape(str(invoice.due_date))}</Termin>\n"
+            f"    <Termin>{_escape(str(invoice.due_date))}</Termin>\n"
             f"  </TerminPlatnosci>"
         )
     parts.append("  <FormaPlatnosci>6</FormaPlatnosci>")
     if has_iban:
         parts.append(
-            f"  <RachunekBankowy>\n    <NrRB>{xml_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
+            f"  <RachunekBankowy>\n    <NrRB>{_escape(pm.iban)}</NrRB>\n  </RachunekBankowy>"
         )
     if link_do_platnosci:
-        parts.append(f"  <LinkDoPlatnosci>{xml_escape(link_do_platnosci)}</LinkDoPlatnosci>")
+        parts.append(f"  <LinkDoPlatnosci>{_escape(link_do_platnosci)}</LinkDoPlatnosci>")
     if ipksef:
-        parts.append(f"  <IPKSeF>{xml_escape(ipksef)}</IPKSeF>")
+        parts.append(f"  <IPKSeF>{_escape(ipksef)}</IPKSeF>")
     parts.append("</Platnosc>")
     return "\n".join(parts)
 
@@ -631,7 +645,7 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
                 '    <KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>',
                 "    <WariantFormularza>3</WariantFormularza>",
                 f"    <DataWytworzeniaFa>{now_utc}</DataWytworzeniaFa>",
-                f"    <SystemInfo>{xml_escape(_SYSTEM_INFO)}</SystemInfo>",
+                f"    <SystemInfo>{_escape(_SYSTEM_INFO)}</SystemInfo>",
                 "  </Naglowek>",
                 # --- Podmiot1 (seller) ---
                 f"  {_fa3_seller_block(invoice.seller).replace(chr(10), chr(10) + '  ').strip()}",
@@ -650,9 +664,9 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
             parts += [
                 # --- Fa ---
                 "  <Fa>",
-                f"    <KodWaluty>{xml_escape(invoice.currency_code)}</KodWaluty>",
-                f"    <P_1>{xml_escape(str(invoice.invoice_date))}</P_1>",
-                f"    <P_2>{xml_escape(invoice.invoice_number)}</P_2>",
+                f"    <KodWaluty>{_escape(invoice.currency_code)}</KodWaluty>",
+                f"    <P_1>{_escape(str(invoice.invoice_date))}</P_1>",
+                f"    <P_2>{_escape(invoice.invoice_number)}</P_2>",
             ]
 
             # VAT rate bands (only non-zero bands are emitted)
@@ -668,7 +682,7 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
                 parts.append(f"    {al}")
 
             # RodzajFaktury (mandatory)
-            parts.append(f"    <RodzajFaktury>{xml_escape(rodzaj)}</RodzajFaktury>")
+            parts.append(f"    <RodzajFaktury>{_escape(rodzaj)}</RodzajFaktury>")
 
             # PL-4.1: Correction reference block
             if opts.correction:
@@ -692,7 +706,7 @@ class FA3Generator(BaseDocumentGenerator[KSeFInvoice]):
                 parts += [
                     "  <Stopka>",
                     "    <Informacje>",
-                    f"      <StopkaFaktury>{xml_escape(invoice.note)}</StopkaFaktury>",
+                    f"      <StopkaFaktury>{_escape(invoice.note)}</StopkaFaktury>",
                     "    </Informacje>",
                     "  </Stopka>",
                 ]

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-21T17:42:20.459746+00:00",
+  "generated_at": "2026-08-31T09:35:09.220126+00:00",
   "pkg_name": "mcp-ksef-pl",
-  "pkg_version": "0.7.0",
-  "core_version": "1.19.0",
+  "pkg_version": "0.8.3",
+  "core_version": "1.27.0",
   "core_version_compatible": true,
-  "exit_code": 0,
+  "exit_code": 1,
   "total_blocking": 0,
-  "total_warnings": 0,
+  "total_warnings": 5,
   "checks": [
     {
       "check_id": "CHECK_1",
@@ -15,7 +15,7 @@
       "skipped": false,
       "skip_reason": "",
       "blocking_count": 0,
-      "warning_count": 0,
+      "warning_count": 5,
       "findings": [
         {
           "check_id": "CHECK_1",
@@ -72,6 +72,13 @@
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.base_server.BasePartyValidator",
           "message": "Intentionally overridden by mcp-ksef-pl."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.base_server.Callable",
+          "message": "Core symbol 'Callable' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
         },
         {
           "check_id": "CHECK_1",
@@ -261,13 +268,6 @@
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.digital_signature.safe_fromstring",
           "message": "Imported and used."
-        },
-        {
-          "check_id": "CHECK_1",
-          "tag": "[OVERRIDE]",
-          "severity": "OK",
-          "symbol": "mcp_einvoicing_core.digital_signature.timezone",
-          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -518,13 +518,6 @@
           "check_id": "CHECK_1",
           "tag": "[OVERRIDE]",
           "severity": "OK",
-          "symbol": "mcp_einvoicing_core.http_client.Enum",
-          "message": "Intentionally overridden by mcp-ksef-pl."
-        },
-        {
-          "check_id": "CHECK_1",
-          "tag": "[OVERRIDE]",
-          "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.Field",
           "message": "Intentionally overridden by mcp-ksef-pl."
         },
@@ -562,6 +555,13 @@
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.http_client.PlatformError",
           "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.http_client.StrEnum",
+          "message": "Core symbol 'StrEnum' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
         },
         {
           "check_id": "CHECK_1",
@@ -705,17 +705,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[OVERRIDE]",
-          "severity": "OK",
-          "symbol": "mcp_einvoicing_core.pdf.Union",
-          "message": "Intentionally overridden by mcp-ksef-pl."
-        },
-        {
-          "check_id": "CHECK_1",
-          "tag": "[OVERRIDE]",
-          "severity": "OK",
-          "symbol": "mcp_einvoicing_core.peppol.Enum",
-          "message": "Intentionally overridden by mcp-ksef-pl."
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.peppol.Callable",
+          "message": "Core symbol 'Callable' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
         },
         {
           "check_id": "CHECK_1",
@@ -758,6 +751,13 @@
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.peppol.PlatformError",
           "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.peppol.StrEnum",
+          "message": "Core symbol 'StrEnum' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
         },
         {
           "check_id": "CHECK_1",
@@ -887,6 +887,13 @@
         },
         {
           "check_id": "CHECK_1",
+          "tag": "[MISSING]",
+          "severity": "WARNING",
+          "symbol": "mcp_einvoicing_core.schematron.XSDValidator",
+          "message": "Core symbol 'XSDValidator' is neither imported by mcp-ksef-pl nor marked as an intentional override. Add to _INTENTIONAL_OVERRIDES if this is deliberate."
+        },
+        {
+          "check_id": "CHECK_1",
           "tag": "[OVERRIDE]",
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.schematron.abstractmethod",
@@ -946,6 +953,13 @@
           "tag": "[OVERRIDE]",
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.Decimal",
+          "message": "Intentionally overridden by mcp-ksef-pl."
+        },
+        {
+          "check_id": "CHECK_1",
+          "tag": "[OVERRIDE]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.xml_utils.DiscouragedCharacterError",
           "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
@@ -1013,6 +1027,13 @@
         },
         {
           "check_id": "CHECK_1",
+          "tag": "[OK]",
+          "severity": "OK",
+          "symbol": "mcp_einvoicing_core.xml_utils.sanitize_xml_text",
+          "message": "Imported and used."
+        },
+        {
+          "check_id": "CHECK_1",
           "tag": "[OVERRIDE]",
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.validate_date_iso",
@@ -1034,10 +1055,10 @@
         },
         {
           "check_id": "CHECK_1",
-          "tag": "[OK]",
+          "tag": "[OVERRIDE]",
           "severity": "OK",
           "symbol": "mcp_einvoicing_core.xml_utils.xml_escape",
-          "message": "Imported and used."
+          "message": "Intentionally overridden by mcp-ksef-pl."
         },
         {
           "check_id": "CHECK_1",
@@ -1224,7 +1245,7 @@
           "tag": "[OK]",
           "severity": "OK",
           "symbol": "mcp-einvoicing-core",
-          "message": "Installed: 1.19.0 | Declared range: >=1.19.0,<2.0.0 | Compatible: True"
+          "message": "Installed: 1.27.0 | Declared range: >=1.27.0,<2.0.0 | Compatible: True"
         }
       ]
     },

@@ -273,6 +273,18 @@ _INTENTIONAL_OVERRIDES: dict[str, set[str]] = {
         "validate_date_iso",
         "Any",
         "Decimal",
+        # OVERRIDE-REASON: xml_escape (core v1.27.0, PL-DISC-1) IS used by
+        # generator.py, but only via a private alias (_raw_xml_escape) so the
+        # module-level _escape() wrapper can call sanitize_xml_text() first
+        # without recursing on its own name. The audit's runtime introspection
+        # only sees public (non-underscore) module attributes, so the alias
+        # is invisible to CHECK 1 even though the symbol is genuinely in use.
+        "xml_escape",
+        # OVERRIDE-REASON: DiscouragedCharacterError (core v1.27.0, PL-DISC-1)
+        # is raised internally by sanitize_xml_text(); generator.py's
+        # generate() wraps every exception in DocumentGenerationError, so PL
+        # never needs to catch or import the specific exception class.
+        "DiscouragedCharacterError",
     },
 }
 
