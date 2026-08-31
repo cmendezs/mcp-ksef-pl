@@ -304,6 +304,3 @@ Współpraca jest mile widziana — zobacz [CONTRIBUTING.md](CONTRIBUTING.md) po
 
 Ten projekt jest dystrybuowany na licencji **Apache 2.0**.
 Szczegóły w pliku [LICENSE](LICENSE). Pełną historię wersji znajdziesz w [CHANGELOG.md](CHANGELOG.md).
-
----
-*Projekt utrzymywany przez cmendezs. W przypadku pytań dotyczących implementacji KSeF lub Peppol otwórz Issue.*
