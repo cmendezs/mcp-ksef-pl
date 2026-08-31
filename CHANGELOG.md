@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.4] - 2026-08-31
+
+### Fixed
+- **PL-ERR-1:** `KSeFClient._request`'s KSeF-structured-error re-raise
+  (`_raise_ksef_error`) was unreachable dead code — it only ran when
+  `exc.response_body` was truthy, but `mcp-einvoicing-core`'s `PlatformError`
+  never set that attribute, so every KSeF error surfaced as core's generic
+  `HTTP error <code>` message instead of KSeF's own
+  `{"exceptionCode": ..., "message": ...}` body. Fixed by
+  `mcp-einvoicing-core` v1.28.0, which now threads the raw response body
+  through `PlatformError.response_body`; the `hasattr` guard is removed
+  since the attribute is now always present.
+- **PL-TZ-1:** `_to_iso_datetime` passed a naive (offset-less) full datetime
+  string straight through to `search_documents`'s `dateRange` filter. Such a
+  value is assumed UTC and now gets `+00:00` appended; a value already
+  carrying a `Z` suffix or an explicit offset is unaffected.
+
+### Added
+- `KSeFClient._request` now logs the KSeF API v2.6.0 `X-System-Warning`
+  response header (additive, non-fatal) at `WARNING` level when present on
+  an otherwise-successful response. Does not affect the return value.
+
+Raises the core lower-bound pin to `>=1.28.0` (was `>=1.27.0`).
+
+---
+
 ## [0.8.3] - 2026-08-31
 
 ### Fixed

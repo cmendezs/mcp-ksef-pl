@@ -97,10 +97,22 @@ class KSeFClient(BaseEInvoicingClient):
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:  # type: ignore[override]
         """Override _request to parse KSeF-structured error bodies (PL-3.2)."""
         try:
-            return await super()._request(method, path, **kwargs)
+            response = await super()._request(method, path, **kwargs)
+            # KSeF API v2.6.0: an additive, non-fatal advisory header on
+            # otherwise-successful responses. Log it so a caller isn't left
+            # guessing why a later API version starts warning about this
+            # request; it never affects the return value.
+            warning = response.headers.get("X-System-Warning")
+            if warning:
+                logger.warning("KSeF X-System-Warning on %s %s: %s", method, path, warning)
+            return response
         except PlatformError as exc:
             # Re-raise with KSeF-specific error body parsed when available.
-            if hasattr(exc, "response_body") and exc.response_body:
+            # PL-ERR-1: PlatformError.response_body (core v1.28.0) was
+            # previously always None, so this branch was unreachable dead
+            # code — KSeF's structured {"exceptionCode", "message"} body was
+            # discarded in favor of core's generic HTTP-status message.
+            if exc.response_body:
                 _raise_ksef_error(exc.status_code, exc.response_body)
             raise
 
@@ -491,10 +503,19 @@ def _normalize_subject_type(value: str) -> str:
 def _to_iso_datetime(value: str, *, end: bool) -> str:
     """Normalise a YYYY-MM-DD or ISO datetime string to a full ISO-8601 datetime.
 
-    If *value* is already a full ISO string (contains 'T'), return it unchanged.
-    Otherwise append T00:00:00+00:00 (start of day) or T23:59:59+00:00 (end).
+    Date-only input (no 'T') gets T00:00:00+00:00 (start of day) or
+    T23:59:59+00:00 (end) appended. A full datetime that already carries a
+    'Z' suffix or an explicit +/-HH:MM offset is returned unchanged.
+
+    PL-TZ-1: a full datetime with a 'T' but no timezone indicator (naive) is
+    assumed UTC and gets '+00:00' appended. KSeF's dateRange filter is
+    offset-sensitive; previously such a value passed through unadjusted and
+    would have been ambiguous rather than treated as UTC.
     """
-    if "T" in value:
+    if "T" not in value:
+        suffix = "T23:59:59+00:00" if end else "T00:00:00+00:00"
+        return f"{value}{suffix}"
+    _, _, time_part = value.partition("T")
+    if time_part.endswith("Z") or "+" in time_part or "-" in time_part:
         return value
-    suffix = "T23:59:59+00:00" if end else "T00:00:00+00:00"
-    return f"{value}{suffix}"
+    return f"{value}+00:00"

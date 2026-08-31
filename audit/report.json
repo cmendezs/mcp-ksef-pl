@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-31T09:35:09.220126+00:00",
+  "generated_at": "2026-08-31T09:40:12.029530+00:00",
   "pkg_name": "mcp-ksef-pl",
   "pkg_version": "0.8.3",
-  "core_version": "1.27.0",
+  "core_version": "1.28.0",
   "core_version_compatible": true,
   "exit_code": 1,
   "total_blocking": 0,
@@ -1245,7 +1245,7 @@
           "tag": "[OK]",
           "severity": "OK",
           "symbol": "mcp-einvoicing-core",
-          "message": "Installed: 1.27.0 | Declared range: >=1.27.0,<2.0.0 | Compatible: True"
+          "message": "Installed: 1.28.0 | Declared range: >=1.28.0,<2.0.0 | Compatible: True"
         }
       ]
     },

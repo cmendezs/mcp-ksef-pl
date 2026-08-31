@@ -5,7 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from mcp_ksef_pl.config import KSeFEnvironment, KSeFSettings
-from mcp_ksef_pl.lifecycle import KSeFLifecycleManager, _pick_encryption_cert, _to_iso_datetime
+from mcp_ksef_pl.lifecycle import (
+    KSeFClient,
+    KSeFLifecycleManager,
+    _pick_encryption_cert,
+    _to_iso_datetime,
+)
 
 
 @pytest.fixture
@@ -90,6 +95,101 @@ class TestToIsoDatetime:
     def test_full_iso_passthrough(self) -> None:
         dt = "2026-01-15T12:30:00+00:00"
         assert _to_iso_datetime(dt, end=False) == dt
+
+    def test_z_suffix_passthrough(self) -> None:
+        dt = "2026-01-15T12:30:00Z"
+        assert _to_iso_datetime(dt, end=False) == dt
+
+    def test_negative_offset_passthrough(self) -> None:
+        dt = "2026-01-15T12:30:00-05:00"
+        assert _to_iso_datetime(dt, end=False) == dt
+
+    def test_naive_datetime_gets_utc_offset(self) -> None:
+        """PL-TZ-1: a 'T'-bearing value with no offset is assumed UTC."""
+        assert _to_iso_datetime("2026-01-15T12:30:00", end=False) == "2026-01-15T12:30:00+00:00"
+
+
+class TestKSeFClientRequest:
+    @pytest.mark.asyncio
+    async def test_logs_x_system_warning_header(
+        self, test_settings: KSeFSettings, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        client = KSeFClient(test_settings)
+        fake_response = MagicMock()
+        fake_response.headers = {"X-System-Warning": "deprecated field used"}
+
+        with (
+            patch(
+                "mcp_einvoicing_core.http_client.BaseEInvoicingClient._request",
+                new_callable=AsyncMock,
+                return_value=fake_response,
+            ),
+            caplog.at_level("WARNING"),
+        ):
+            response = await client._request("GET", "/limits/context")
+
+        assert response is fake_response
+        assert "deprecated field used" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_no_warning_header_is_silent(
+        self, test_settings: KSeFSettings, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        client = KSeFClient(test_settings)
+        fake_response = MagicMock()
+        fake_response.headers = {}
+
+        with (
+            patch(
+                "mcp_einvoicing_core.http_client.BaseEInvoicingClient._request",
+                new_callable=AsyncMock,
+                return_value=fake_response,
+            ),
+            caplog.at_level("WARNING"),
+        ):
+            await client._request("GET", "/limits/context")
+
+        assert "X-System-Warning" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_reraises_ksef_structured_error_from_response_body(
+        self, test_settings: KSeFSettings
+    ) -> None:
+        """PL-ERR-1: PlatformError.response_body (core v1.28.0) makes this reachable."""
+        from mcp_einvoicing_core import PlatformError
+
+        client = KSeFClient(test_settings)
+        upstream = PlatformError(
+            status_code=400,
+            message="HTTP error 400",
+            response_body=b'{"exceptionCode": "AUTH_001", "message": "invalid token"}',
+        )
+
+        with patch(
+            "mcp_einvoicing_core.http_client.BaseEInvoicingClient._request",
+            new_callable=AsyncMock,
+            side_effect=upstream,
+        ):
+            with pytest.raises(PlatformError, match=r"\[AUTH_001\] invalid token"):
+                await client._request("GET", "/limits/context")
+
+    @pytest.mark.asyncio
+    async def test_reraises_unchanged_when_no_response_body(
+        self, test_settings: KSeFSettings
+    ) -> None:
+        from mcp_einvoicing_core import PlatformError
+
+        client = KSeFClient(test_settings)
+        upstream = PlatformError(status_code=500, message="HTTP error 500")
+
+        with patch(
+            "mcp_einvoicing_core.http_client.BaseEInvoicingClient._request",
+            new_callable=AsyncMock,
+            side_effect=upstream,
+        ):
+            with pytest.raises(PlatformError, match="HTTP error 500") as exc_info:
+                await client._request("GET", "/limits/context")
+        assert exc_info.value is upstream
 
 
 # ---------------------------------------------------------------------------
