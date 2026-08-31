@@ -41,6 +41,21 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.8.5] - 2026-08-31
+#### Fixed
+- `mcp_ksef_pl/__init__.py`: `__version__` had drifted to `"0.5.1"` while
+  `pyproject.toml`/`server.json` were already at `0.8.4`.
+- `generator.py`: `_SYSTEM_INFO` (embedded in the `<SystemInfo>` element of every generated
+  FA(2)/FA(3) invoice) had drifted to `"mcp-ksef-pl/0.5.0"`.
+- Added `tests/test_metadata.py` to assert `__version__`, `_SYSTEM_INFO`, and `server.json`
+  stay in sync with `pyproject.toml` going forward.
+- Cleared 5 stale `_INTENTIONAL_OVERRIDES` entries in `audit/audit_vs_core.py` that had
+  drifted from a core version bump (`Callable`, `StrEnum`, `XSDValidator` non-blocking
+  CHECK_1 warnings); audit gate is back to a clean PASS. Backfilled the missing `[0.8.2]`
+  CHANGELOG entry below.
+
+No core pin change; `>=1.28.0,<2.0.0` already covers `1.28.1`.
+
 ### [0.8.4] - 2026-08-31
 #### Fixed
 - **[PL-ERR-1]** `KSeFClient._request`'s KSeF-structured-error re-raise (`_raise_ksef_error`) was unreachable dead code — it only ran when `exc.response_body` was truthy, but `mcp-einvoicing-core`'s `PlatformError` never set that attribute, so every KSeF error surfaced as core's generic `HTTP error <code>` message instead of KSeF's own `{"exceptionCode", "message"}` body. Fixed by `mcp-einvoicing-core` v1.28.0 (`PlatformError.response_body`); the `hasattr` guard is removed since the attribute is now always present.
