@@ -11,28 +11,123 @@
 
 Serwer MCP w Pythonie udostępniający narzędzia do polskiej **faktury elektronicznej** zgodnej z **KSeF (FA(2))** i **Peppol BIS Billing 3.0 / EN 16931**. Umożliwia agentom AI (Claude, IDE) generowanie, walidację i przesyłanie faktur do Krajowego Systemu e-Faktur (KSeF), a także weryfikację identyfikatorów podatkowych NIP i REGON.
 
-## Zbudowano na
+---
+
+## Wprowadzenie
 
 Ten pakiet jest zbudowany na bazie [**mcp-einvoicing-core**](https://github.com/cmendezs/mcp-einvoicing-core), wspólnej biblioteki bazowej dla europejskich serwerów MCP do fakturowania elektronicznego. Dostarcza ona klienta HTTP OAuth2, pamięć podręczną tokenów, modele danych, narzędzia do logowania i hierarchię wyjątków.
 
 `mcp-einvoicing-core` jest instalowane automatycznie jako zależność, nie jest wymagany dodatkowy krok.
 
----
+## Instalacja
 
-## 🏗️ Architektura
+### Przez PyPI (zalecane)
 
-Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI a platformą KSeF oraz siecią Peppol:
-
-```text
-[ System ERP / Aplikacja ] <--> [ Serwer MCP ] <--> [ KSeF (MF) / Sieć Peppol ]
-          ^                           |
-          |                           v
-   [ Agent AI (Claude) ] <--- (FA(2) / EN 16931)
+```bash
+pip install mcp-ksef-pl
 ```
 
----
+Lub bez wcześniejszej instalacji z `uvx`:
 
-## 🛠️ Dostępne narzędzia
+```bash
+uvx mcp-ksef-pl
+```
+
+### Ze źródeł
+
+```bash
+git clone https://github.com/cmendezs/mcp-ksef-pl.git
+cd mcp-ksef-pl
+uv sync --all-extras
+```
+
+## Konfiguracja (zmienne środowiskowe)
+
+| Zmienna | Domyślna | Opis |
+|---------|----------|------|
+| `KSEF_ENVIRONMENT` | `test` | Środowisko KSeF: `production` lub `test` |
+| `KSEF_SESSION_TOKEN` | — | Token sesji KSeF (uzyskiwany przez przepływ challenge-response z MF) |
+| `KSEF_NIP` | — | NIP podmiotu wysyłającego faktury |
+| `KSEF_TIMEOUT` | `30` | Limit czasu żądań HTTP w sekundach |
+| `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Wymusza przypinanie SPKI SHA-256 dla certyfikatu szyfrującego MF. Nieaktywne, dopóki odciski palca nie zostaną skonfigurowane dla danego środowiska, nawet jeśli ustawione na `true` |
+| `EINVOICING_PEPPOL_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię list kodów OpenPeppol eDEC, wymagany przez narzędzia list kodów Peppol (nie dołączony do tego pakietu; zobacz README `mcp-einvoicing-core`) |
+| `EINVOICING_EN16931_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię semantycznych list kodów EN 16931 CEF "Digital Building Blocks", wymagany przez narzędzia list kodów EN 16931 (nie dołączony; zobacz README `mcp-einvoicing-core`) |
+
+Narzędzia raportowania EUSR/TSR oraz MLS dodatkowo wymagają dodatku `[xslt2]` (`pip install "mcp-ksef-pl[xslt2]"`) do walidacji Schematron.
+
+## Integracja z Claude Desktop
+
+Dodaj poniższą konfigurację do pliku `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ksef-pl": {
+      "command": "uvx",
+      "args": ["mcp-ksef-pl"],
+      "env": {
+        "KSEF_ENVIRONMENT": "test",
+        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
+        "KSEF_NIP": "<twój-nip>"
+      }
+    }
+  }
+}
+```
+
+## Integracja z Cursor
+
+Cursor obsługuje serwery MCP przez stdio. Dodaj konfigurację do:
+- **Globalnie** (wszystkie projekty): `~/.cursor/mcp.json`
+- **Projekt** (tylko to repozytorium): `.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "ksef-pl": {
+      "command": "uvx",
+      "args": ["mcp-ksef-pl"],
+      "env": {
+        "KSEF_ENVIRONMENT": "test",
+        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
+        "KSEF_NIP": "<twój-nip>"
+      }
+    }
+  }
+}
+```
+
+Przeładuj okno Cursor (`Ctrl+Shift+P` → *Reload Window*) po zapisaniu zmian.
+
+## Integracja z Kiro
+
+Kiro obsługuje serwery MCP przez dedykowany plik konfiguracyjny:
+- **Globalnie**: `~/.kiro/settings/mcp.json`
+- **Workspace**: `.kiro/settings/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "ksef-pl": {
+      "command": "uvx",
+      "args": ["mcp-ksef-pl"],
+      "env": {
+        "KSEF_ENVIRONMENT": "test",
+        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
+        "KSEF_NIP": "<twój-nip>"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+> **Wskazówka bezpieczeństwa**: zamiast wpisywać token wprost, użyj składni
+> `"KSEF_SESSION_TOKEN": "${KSEF_SESSION_TOKEN}"`, Kiro rozwiązuje zmienne środowiskowe
+> powłoki przy uruchomieniu.
+
+## Dostępne narzędzia
 
 ### Obsługa faktur FA(3) / FA(2)
 
@@ -43,6 +138,11 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
 | `validate_fa3_invoice` | Waliduje XML FA(3): walidacja XSD i reguły biznesowe specyficzne dla FA(3) |
 | `validate_fa2_invoice` | Waliduje XML FA(2): walidacja XSD (jeśli schemat dostępny) i reguły biznesowe |
 | `parse_fa2_invoice` | Parsuje XML FA(2) do słownika strukturalnego |
+
+Oficjalne schematy FA(2) i FA(3) są dołączone do pakietu (`src/mcp_ksef_pl/schemas/`)
+i ładowane automatycznie przez `importlib.resources` — nie jest wymagane ręczne pobieranie
+ani konfiguracja. `validate_fa2_invoice` i `validate_fa3_invoice` od razu wykonują pełną
+walidację XSD dla każdej instalacji.
 
 ### Cykl życia w KSeF
 
@@ -84,8 +184,6 @@ Wyszukiwanie uczestnika Peppol, wyszukiwanie punktu usługowego, diagnostyka wy�
 
 Pełną dokumentację parametrów tych narzędzi znajdziesz w [README `mcp-einvoicing-core`](https://github.com/cmendezs/mcp-einvoicing-core#readme).
 
----
-
 ### Narzędzia raportowania i statusu Peppol
 
 Dodane w v0.8.0 poprzez trzy opcjonalne wtyczki rdzenia, montowane bezwarunkowo w `server.py`. Każda zwraca czytelny błąd przy wywołaniu (nie przy rejestracji), jeśli brakuje jej dodatku lub katalogu danych.
@@ -100,49 +198,7 @@ Dodane w v0.8.0 poprzez trzy opcjonalne wtyczki rdzenia, montowane bezwarunkowo 
 
 Pełną dokumentację parametrów tych narzędzi znajdziesz w [README `mcp-einvoicing-core`](https://github.com/cmendezs/mcp-einvoicing-core#readme).
 
----
-
-## 🚀 Instalacja
-
-### Przez PyPI (zalecane)
-
-```bash
-pip install mcp-ksef-pl
-```
-
-Lub bez wcześniejszej instalacji z `uvx`:
-
-```bash
-uvx mcp-ksef-pl
-```
-
-### Ze źródeł
-
-```bash
-git clone https://github.com/cmendezs/mcp-ksef-pl.git
-cd mcp-ksef-pl
-uv sync --all-extras
-```
-
----
-
-## ⚙️ Konfiguracja (zmienne środowiskowe)
-
-| Zmienna | Domyślna | Opis |
-|---------|----------|------|
-| `KSEF_ENVIRONMENT` | `test` | Środowisko KSeF: `production` lub `test` |
-| `KSEF_SESSION_TOKEN` | — | Token sesji KSeF (uzyskiwany przez przepływ challenge-response z MF) |
-| `KSEF_NIP` | — | NIP podmiotu wysyłającego faktury |
-| `KSEF_TIMEOUT` | `30` | Limit czasu żądań HTTP w sekundach |
-| `KSEF_VERIFY_MF_KEY_PINNING` | `false` | Wymusza przypinanie SPKI SHA-256 dla certyfikatu szyfrującego MF. Nieaktywne, dopóki odciski palca nie zostaną skonfigurowane dla danego środowiska, nawet jeśli ustawione na `true` |
-| `EINVOICING_PEPPOL_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię list kodów OpenPeppol eDEC, wymagany przez narzędzia list kodów Peppol (nie dołączony do tego pakietu; zobacz README `mcp-einvoicing-core`) |
-| `EINVOICING_EN16931_CODELIST_DIR` | — | Lokalny katalog zawierający własną kopię semantycznych list kodów EN 16931 CEF "Digital Building Blocks", wymagany przez narzędzia list kodów EN 16931 (nie dołączony; zobacz README `mcp-einvoicing-core`) |
-
-Narzędzia raportowania EUSR/TSR oraz MLS dodatkowo wymagają dodatku `[xslt2]` (`pip install "mcp-ksef-pl[xslt2]"`) do walidacji Schematron.
-
----
-
-## 🔐 Uwierzytelnianie w KSeF
+## Uwierzytelnianie w KSeF
 
 KSeF API v2 wykorzystuje wieloetapowy przepływ challenge/redeem do wydania tokenu AccessToken. Ten serwer MCP przyjmuje już uzyskany token i nie jest w stanie zautomatyzować kroku podpisywania (wymaga kwalifikowanego podpisu elektronicznego).
 
@@ -207,103 +263,27 @@ KSeF API v2 wykorzystuje wieloetapowy przepływ challenge/redeem do wydania toke
 - Specyfikacja sesji interaktywnej (CIRFMF): https://github.com/CIRFMF/ksef-docs/blob/main/sesja-interaktywna.md
 - Komunikat o migracji na FA(3): `specs/ksef-v2-fa3-migration-announcement-20250630.pdf`
 
----
+## Architektura
 
-## 🤖 Integracja z Claude Desktop
+Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI a platformą KSeF oraz siecią Peppol:
 
-Dodaj poniższą konfigurację do pliku `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "ksef-pl": {
-      "command": "uvx",
-      "args": ["mcp-ksef-pl"],
-      "env": {
-        "KSEF_ENVIRONMENT": "test",
-        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
-        "KSEF_NIP": "<twój-nip>"
-      }
-    }
-  }
-}
+```text
+[ System ERP / Aplikacja ] <--> [ Serwer MCP ] <--> [ KSeF (MF) / Sieć Peppol ]
+          ^                           |
+          |                           v
+   [ Agent AI (Claude) ] <--- (FA(2) / EN 16931)
 ```
 
----
-
-## ⌨️ Integracja z Cursor
-
-Cursor obsługuje serwery MCP przez stdio. Dodaj konfigurację do:
-- **Globalnie** (wszystkie projekty): `~/.cursor/mcp.json`
-- **Projekt** (tylko to repozytorium): `.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "ksef-pl": {
-      "command": "uvx",
-      "args": ["mcp-ksef-pl"],
-      "env": {
-        "KSEF_ENVIRONMENT": "test",
-        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
-        "KSEF_NIP": "<twój-nip>"
-      }
-    }
-  }
-}
-```
-
-Przeładuj okno Cursor (`Ctrl+Shift+P` → *Reload Window*) po zapisaniu zmian.
-
----
-
-## 🪐 Integracja z Kiro
-
-Kiro obsługuje serwery MCP przez dedykowany plik konfiguracyjny:
-- **Globalnie**: `~/.kiro/settings/mcp.json`
-- **Workspace**: `.kiro/settings/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "ksef-pl": {
-      "command": "uvx",
-      "args": ["mcp-ksef-pl"],
-      "env": {
-        "KSEF_ENVIRONMENT": "test",
-        "KSEF_SESSION_TOKEN": "<twój-token-sesji-ksef>",
-        "KSEF_NIP": "<twój-nip>"
-      },
-      "disabled": false,
-      "autoApprove": []
-    }
-  }
-}
-```
-
-> **Wskazówka bezpieczeństwa**: zamiast wpisywać token wprost, użyj składni
-> `"KSEF_SESSION_TOKEN": "${KSEF_SESSION_TOKEN}"`, Kiro rozwiązuje zmienne środowiskowe
-> powłoki przy uruchomieniu.
-
----
-
-## 📋 Schemat XSD
-
-Oficjalne schematy FA(2) i FA(3) są dołączone do pakietu (`src/mcp_ksef_pl/schemas/`)
-i ładowane automatycznie przez `importlib.resources` — nie jest wymagane ręczne pobieranie
-ani konfiguracja. `validate_fa2_invoice` i `validate_fa3_invoice` od razu wykonują pełną
-walidację XSD dla każdej instalacji.
-
----
-
-## 🧪 Testy
+## Testy
 
 ```bash
 # Uruchom testy jednostkowe
 uv run pytest tests/ -v
 ```
 
----
+## Współpraca
+
+Współpraca jest mile widziana — zobacz [CONTRIBUTING.md](CONTRIBUTING.md) po szczegóły.
 
 ## Inne serwery MCP do e-fakturowania
 
@@ -320,12 +300,10 @@ uv run pytest tests/ -v
 | 🇪🇸 Hiszpania | [mcp-facturacion-electronica-es](https://github.com/cmendezs/mcp-facturacion-electronica-es) |
 | 🇦🇪 Zjednoczone Emiraty Arabskie | [mcp-einvoicing-ae](https://github.com/cmendezs/mcp-einvoicing-ae) |
 
----
-
-## 📄 Licencja
+## Licencja
 
 Ten projekt jest dystrybuowany na licencji **Apache 2.0**.
-Szczegóły w pliku [LICENSE](LICENSE).
+Szczegóły w pliku [LICENSE](LICENSE). Pełną historię wersji znajdziesz w [CHANGELOG.md](CHANGELOG.md).
 
 ---
 *Projekt utrzymywany przez cmendezs. W przypadku pytań dotyczących implementacji KSeF lub Peppol otwórz Issue.*
