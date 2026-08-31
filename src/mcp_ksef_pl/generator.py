@@ -53,7 +53,7 @@ from .models import (
 
 _NS = "http://crd.gov.pl/wzor/2023/06/29/12648/"
 _NS3 = "http://crd.gov.pl/wzor/2025/06/25/13775/"
-_SYSTEM_INFO = "mcp-ksef-pl/0.5.0"
+_SYSTEM_INFO = "mcp-ksef-pl/0.8.5"
 
 # Mapping from VAT rate (Decimal) to FA(2) P_13_x / P_14_x field index
 _VAT_RATE_FIELD: dict[str, int] = {
