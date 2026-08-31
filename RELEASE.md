@@ -41,6 +41,22 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.8.4] - 2026-08-31
+#### Fixed
+- **[PL-ERR-1]** `KSeFClient._request`'s KSeF-structured-error re-raise (`_raise_ksef_error`) was unreachable dead code — it only ran when `exc.response_body` was truthy, but `mcp-einvoicing-core`'s `PlatformError` never set that attribute, so every KSeF error surfaced as core's generic `HTTP error <code>` message instead of KSeF's own `{"exceptionCode", "message"}` body. Fixed by `mcp-einvoicing-core` v1.28.0 (`PlatformError.response_body`); the `hasattr` guard is removed since the attribute is now always present.
+- **[PL-TZ-1]** `_to_iso_datetime` passed a naive (offset-less) full datetime string straight through to `search_documents`'s `dateRange` filter. Now assumed UTC and gets `+00:00` appended; a value already carrying a `Z` suffix or an explicit offset is unaffected.
+
+#### Added
+- `KSeFClient._request` now logs the KSeF API v2.6.0 `X-System-Warning` response header at `WARNING` level when present on an otherwise-successful response.
+
+Raises the core lower-bound pin to `>=1.28.0` (was `>=1.27.0`). Found during the KSeF API v2.1.1→v2.7.1 delta review, regulatory-watch issue [#10](https://github.com/cmendezs/mcp-ksef-pl/issues/10).
+
+### [0.8.3] - 2026-08-31
+#### Fixed
+- **[PL-DISC-1]** KSeF API v2.4.0 (PRD-live since 2026-07-16) rejects an otherwise schema-valid FA(2)/FA(3) document containing a W3C XML 1.0 Appendix C "discouraged" code point (C1 controls + DEL, certain noncharacters); `xml_escape()` alone does not filter these. `generator.py` now routes every text field through a new `_escape()` wrapper that applies `mcp-einvoicing-core`'s new `sanitize_xml_text()` (v1.27.0) before escaping, rejecting generation with `DocumentGenerationError` rather than silently mutating a legally-binding invoice field. Added `tests/test_generator.py::TestDiscouragedCharacterSanitization`.
+
+Raises the core lower-bound pin to `>=1.27.0` (was `>=1.20.0`). Found during the KSeF API v2.1.1→v2.7.1 delta review, regulatory-watch issue [#10](https://github.com/cmendezs/mcp-ksef-pl/issues/10).
+
 ### [0.8.2] - 2026-08-24
 #### Fixed
 - `FA2Parser` line-item xpath looked for a `<FaWiersze>` wrapper around `<FaWiersz>` rows that does not exist in the FA(2) schema (`<FaWiersz>` is a direct child of `<Fa>`), so `parse()` always returned an empty `lines` list for any real FA(2) XML, including this package's own generator output. Fixed to read `<FaWiersz>` directly.
