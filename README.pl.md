@@ -295,6 +295,7 @@ Współpraca jest mile widziana — zobacz [CONTRIBUTING.md](CONTRIBUTING.md) po
 | 🇫🇷 Francja | [mcp-facture-electronique-fr](https://github.com/cmendezs/mcp-facture-electronique-fr) |
 | 🇩🇪 Niemcy | [mcp-einvoicing-de](https://github.com/cmendezs/mcp-einvoicing-de) |
 | 🇮🇹 Włochy | [mcp-fattura-elettronica-it](https://github.com/cmendezs/mcp-fattura-elettronica-it) |
+| 🇲🇽 Meksyk | [mcp-cfdi-mx](https://github.com/cmendezs/mcp-cfdi-mx) |
 | 🇵🇱 Polska | [mcp-ksef-pl](https://github.com/cmendezs/mcp-ksef-pl) |
 | 🇸🇬 Singapur | [mcp-invoicenow-sg](https://github.com/cmendezs/mcp-invoicenow-sg) |
 | 🇪🇸 Hiszpania | [mcp-facturacion-electronica-es](https://github.com/cmendezs/mcp-facturacion-electronica-es) |
