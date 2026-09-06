@@ -1,0 +1,17 @@
+# mcp-ksef-pl
+
+> MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931
+
+## Docs
+
+- [Overview](https://cmendezs.github.io/mcp-ksef-pl/): the full README — what this server does, installation, configuration, available tools
+- [Tools](https://cmendezs.github.io/mcp-ksef-pl/tools/): full MCP tool reference
+- [Changelog](https://cmendezs.github.io/mcp-ksef-pl/changelog/): version history
+- [Contributing](https://cmendezs.github.io/mcp-ksef-pl/contributing/): dev setup and PR checklist
+- [Security](https://cmendezs.github.io/mcp-ksef-pl/security/): vulnerability disclosure policy
+
+## Links
+
+- [PyPI](https://pypi.org/project/mcp-ksef-pl/)
+- [MCP registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.cmendezs/mcp-ksef-pl)
+- [GitHub](https://github.com/cmendezs/mcp-ksef-pl)

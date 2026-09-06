@@ -1,0 +1,80 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "README*"
+      - "docs/**"
+      - "CHANGELOG.md"
+      - "src/**/tools/**"
+      - "src/**/server.py"
+  workflow_dispatch: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build docs site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Upgrade npm
+        # The npm bundled with actions/setup-node's Node 22 image has a bug validating
+        # optional peer dependencies during `npm ci` (starlight-llms-txt nests an older
+        # @astrojs/mdx whose optional peer on @astrojs/markdown-satteri trips it up),
+        # confirmed during the mcp-einvoicing-core/mcp-einvoicing-be pilot rollout. npm 11
+        # (verified locally) does not have this bug.
+        run: npm install -g npm@11
+
+      - name: Set up Python
+        # tomllib (used by scripts/gen_llms_txt.py) is stdlib only from 3.11+.
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: Regenerate llms.txt
+        working-directory: docs
+        run: python3 scripts/gen_llms_txt.py
+
+      - name: Build
+        # For every repo except mcp-einvoicing-core, this run's own `prebuild` npm hook
+        # fetches the canonical docs-theme.css from mcp-einvoicing-core before Astro builds.
+        working-directory: docs
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
