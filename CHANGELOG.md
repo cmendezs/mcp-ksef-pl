@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.6] - 2026-09-07
+
+### Changed
+- **regulatory-update: Peppol BIS 3.0 (PEF/B2G) spec pin 3.0.20 → 3.0.21, closes
+  `regulatory-update` issue #11.** Same upstream release also flagged for
+  `mcp-einvoicing-be`: released 2026-05-20, mandatory from 2026-08-17. New optional Profile 02
+  "Billing with Response", UBL/CII 1.3.16, `PEPPOL-COMMON-R052`/`R053` raised to error, new
+  Dutch-identifier rules — all inside the Peppol-specific Schematron overlay, which this package
+  has never run (no `peppol/` business-rule validation exists here at all; `peppol/generator.py`,
+  `parser.py`, `serializer.py` only delegate to core's UBL serializer/parser). Documentation-only
+  pin refresh (`context-library/countries/pl.md` at the workspace root); no code change.
+
+---
+
 ## [0.8.4] - 2026-08-31
 
 ### Fixed
