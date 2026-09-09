@@ -275,6 +275,14 @@ The server acts as an intelligent communication interface between the AI agent a
    [ AI Agent (Claude) ] <--- (FA(2) / EN 16931)
 ```
 
+## Vendor neutrality
+
+This server implements the standard itself: it builds, validates, and signs the document
+locally. It is not a client for a commercial invoicing platform, and your signing keys and
+credentials never leave your own infrastructure.
+
+Invoices go directly to KSeF with your own authentication token; no intermediary is involved.
+
 ## Tests
 
 ```bash

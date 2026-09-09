@@ -274,6 +274,15 @@ Serwer pełni rolę inteligentnego interfejsu komunikacyjnego między agentem AI
    [ Agent AI (Claude) ] <--- (FA(2) / EN 16931)
 ```
 
+## Neutralność wobec dostawców
+
+Ten serwer samodzielnie implementuje standard: buduje, waliduje i podpisuje dokument lokalnie.
+Nie jest klientem żadnej komercyjnej platformy do fakturowania, a Twoje klucze podpisu i dane
+uwierzytelniające nigdy nie opuszczają Twojej infrastruktury.
+
+Faktury trafiają bezpośrednio do KSeF z użyciem Twojego własnego tokenu uwierzytelniającego;
+żaden pośrednik nie bierze udziału.
+
 ## Testy
 
 ```bash

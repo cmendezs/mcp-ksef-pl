@@ -1,6 +1,6 @@
 # mcp-ksef-pl
 
-> MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931
+> MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931, direct-to-KSeF, no intermediary
 
 ## Docs
 

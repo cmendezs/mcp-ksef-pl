@@ -8,7 +8,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "mcp-ksef-pl",
-      description: "MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931",
+      description: "MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931, direct-to-KSeF, no intermediary",
       customCss: ["./src/styles/docs-theme.css"],
       social: [
         { icon: "github", label: "GitHub", href: "https://github.com/cmendezs/mcp-ksef-pl" },
@@ -28,7 +28,7 @@ export default defineConfig({
       plugins: [
         starlightLlmsTxt({
           projectName: "mcp-ksef-pl",
-          description: "MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931",
+          description: "MCP server for Polish electronic invoicing — KSeF FA(3)/FA(2) and Peppol BIS 3.0/EN 16931, direct-to-KSeF, no intermediary",
           customSets: [
             {
               label: "Key links",
