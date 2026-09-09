@@ -37,6 +37,7 @@ from mcp_einvoicing_core.audit import (
     parse_audit_args,
     render_summary_table,
     run_check_core_coverage,
+    run_check_resource_paths,
     run_check_version_compatibility,
 )
 
@@ -317,6 +318,38 @@ _PKG_MODULES: list[str] = [
 ]
 
 _PYPROJECT = Path(__file__).parent.parent / "pyproject.toml"
+
+# CHECK 7 configuration — every runtime resource directory this package's
+# own modules resolve at import time (CORE-1, core v1.32.0). PL resolves its
+# XSDs via importlib.resources (validator.py's _resolve_schema_path), not a
+# __file__-relative hop count, so it is architecturally immune to the CORE-1
+# bug class — but we still exercise the real resolution here (with no
+# resource_paths declared, CHECK 7 only reports a [SKIP] WARNING, which is
+# indistinguishable from "never checked"; declaring these makes the immunity
+# explicit and catches a genuine packaging regression, e.g. a missing
+# package-data declaration, that importlib.resources itself does not rule out).
+import mcp_ksef_pl  # noqa: E402
+from mcp_ksef_pl.validator import _resolve_schema_path  # noqa: E402
+
+
+def _fa_schema_path(filename: str) -> Path:
+    resolved = _resolve_schema_path(filename)
+    if resolved is None:
+        # Deliberately a path that fails CHECK 7's existence test rather than
+        # raising — a missing schema is exactly what CHECK 7 exists to catch.
+        return Path(filename)
+    return Path(resolved)
+
+
+_PACKAGE_ROOT = Path(mcp_ksef_pl.__file__).resolve().parent
+_RESOURCE_PATHS: dict[str, Path] = {
+    "mcp_ksef_pl.validator._resolve_schema_path('schemat_FA(2)_v1-0E.xsd')": _fa_schema_path(
+        "schemat_FA(2)_v1-0E.xsd"
+    ),
+    "mcp_ksef_pl.validator._resolve_schema_path('schemat_FA(3)_v1-0E.xsd')": _fa_schema_path(
+        "schemat_FA(3)_v1-0E.xsd"
+    ),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -901,6 +934,12 @@ def run_audit() -> AuditReport:
     )
     report.checks.append(run_check_5())
     report.checks.append(run_check_6())
+    report.checks.append(
+        run_check_resource_paths(
+            package_root=_PACKAGE_ROOT,
+            resource_paths=_RESOURCE_PATHS,
+        )
+    )
 
     return report
 
