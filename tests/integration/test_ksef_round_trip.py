@@ -17,7 +17,7 @@ from mcp_einvoicing_core.en16931 import (
 
 from mcp_ksef_pl.config import KSeFSettings
 from mcp_ksef_pl.generator import FA3Generator
-from mcp_ksef_pl.lifecycle import KSeFLifecycleManager
+from mcp_ksef_pl.lifecycle import KSeFLifecycleManager, KSeFSubmissionMetadata
 from mcp_ksef_pl.models import KSeFInvoice, KSeFParty
 
 pytestmark = pytest.mark.integration
@@ -88,7 +88,7 @@ async def test_submit_and_status_round_trip(ksef_settings: KSeFSettings) -> None
     assert "http://crd.gov.pl/wzor/2025/06/25/13775/" in xml
 
     manager = KSeFLifecycleManager(ksef_settings)
-    result = await manager.submit_document(xml, {})
+    result = await manager.submit_document(xml, KSeFSubmissionMetadata())
 
     assert result.session_ref, "Expected a session reference from KSeF"
     assert result.invoice_ref, "Expected an invoice reference from KSeF"

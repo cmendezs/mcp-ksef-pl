@@ -6,7 +6,7 @@ import pytest
 from mcp_einvoicing_core import PlatformError
 
 from mcp_ksef_pl.config import KSeFEnvironment, KSeFSettings
-from mcp_ksef_pl.lifecycle import KSeFLifecycleManager
+from mcp_ksef_pl.lifecycle import KSeFLifecycleManager, KSeFSearchCriteria
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ class TestSubjectTypeNormalization:
             new_callable=AsyncMock,
             return_value={"invoices": []},
         ) as mock_query:
-            await manager.search_documents({"subject_type": "subject1"})
+            await manager.search_documents(KSeFSearchCriteria(subject_type="subject1"))
         assert mock_query.call_args[0][0]["subjectType"] == "Subject1"
 
     @pytest.mark.asyncio
@@ -42,7 +42,7 @@ class TestSubjectTypeNormalization:
             new_callable=AsyncMock,
             return_value={"invoices": []},
         ) as mock_query:
-            await manager.search_documents({"subject_type": "SubjectAuthorized"})
+            await manager.search_documents(KSeFSearchCriteria(subject_type="SubjectAuthorized"))
         assert mock_query.call_args[0][0]["subjectType"] == "SubjectAuthorized"
 
     @pytest.mark.asyncio
@@ -56,14 +56,14 @@ class TestSubjectTypeNormalization:
             new_callable=AsyncMock,
             return_value={"invoices": []},
         ) as mock_query:
-            await manager.search_documents({"subject_type": "subjectauthorized"})
+            await manager.search_documents(KSeFSearchCriteria(subject_type="subjectauthorized"))
         assert mock_query.call_args[0][0]["subjectType"] == "SubjectAuthorized"
 
     @pytest.mark.asyncio
     async def test_unrecognised_subject_type_raises(self, test_settings: KSeFSettings) -> None:
         manager = KSeFLifecycleManager(test_settings)
         with pytest.raises(PlatformError, match="Unrecognised subject_type"):
-            await manager.search_documents({"subject_type": "subject9"})
+            await manager.search_documents(KSeFSearchCriteria(subject_type="subject9"))
 
     @pytest.mark.asyncio
     async def test_default_is_subject1(self, test_settings: KSeFSettings) -> None:
@@ -74,5 +74,5 @@ class TestSubjectTypeNormalization:
             new_callable=AsyncMock,
             return_value={"invoices": []},
         ) as mock_query:
-            await manager.search_documents({})
+            await manager.search_documents(KSeFSearchCriteria())
         assert mock_query.call_args[0][0]["subjectType"] == "Subject1"

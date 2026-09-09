@@ -8,6 +8,8 @@ from mcp_ksef_pl.config import KSeFEnvironment, KSeFSettings
 from mcp_ksef_pl.lifecycle import (
     KSeFClient,
     KSeFLifecycleManager,
+    KSeFSearchCriteria,
+    KSeFSubmissionMetadata,
     _pick_encryption_cert,
     _to_iso_datetime,
 )
@@ -252,7 +254,7 @@ class TestSubmitDocument:
                 new_callable=AsyncMock,
             ),
         ):
-            result = await manager.submit_document(sample_fa3_xml, {})
+            result = await manager.submit_document(sample_fa3_xml, KSeFSubmissionMetadata())
 
         assert result.session_ref == "SESSION-REF-001"
         assert result.invoice_ref == "INVOICE-REF-001"
@@ -265,7 +267,7 @@ class TestSubmitDocument:
         settings = KSeFSettings(environment=KSeFEnvironment.TEST, session_token="")
         manager = KSeFLifecycleManager(settings)
         with pytest.raises(PlatformError, match="AccessToken"):
-            await manager.submit_document("<Faktura/>", {})
+            await manager.submit_document("<Faktura/>", KSeFSubmissionMetadata())
 
     @pytest.mark.asyncio
     async def test_submit_session_close_failure_is_non_fatal(
@@ -312,7 +314,7 @@ class TestSubmitDocument:
                 side_effect=Exception("network timeout"),
             ),
         ):
-            result = await manager.submit_document(sample_fa3_xml, {})
+            result = await manager.submit_document(sample_fa3_xml, KSeFSubmissionMetadata())
 
         # Session close failed but we still get the compound reference.
         assert result.session_ref == "SESSION-001"
@@ -377,12 +379,12 @@ class TestSearchDocuments:
             return_value=mock_response,
         ) as mock_query:
             results = await manager.search_documents(
-                {
-                    "date_from": "2026-01-01",
-                    "date_to": "2026-01-31",
-                    "subject_type": "Subject2",
-                    "date_type": "Issue",
-                }
+                KSeFSearchCriteria(
+                    date_from="2026-01-01",
+                    date_to="2026-01-31",
+                    subject_type="Subject2",
+                    date_type="Issue",
+                )
             )
 
         called_payload = mock_query.call_args[0][0]
@@ -403,7 +405,7 @@ class TestSearchDocuments:
             new_callable=AsyncMock,
             return_value={"invoices": []},
         ) as mock_query:
-            await manager.search_documents({})
+            await manager.search_documents(KSeFSearchCriteria())
 
         payload = mock_query.call_args[0][0]
         assert payload["subjectType"] == "Subject1"

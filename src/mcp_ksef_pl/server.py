@@ -22,7 +22,7 @@ from mcp_einvoicing_core.peppol.tools import register_peppol_tools
 
 from .config import KSeFSettings
 from .generator import FA2Generator, FA3Generator
-from .lifecycle import KSeFLifecycleManager
+from .lifecycle import KSeFLifecycleManager, KSeFSearchCriteria, KSeFSubmissionMetadata
 from .models import KSeFFA3Options, KSeFInvoice
 from .parser import FA2Parser
 from .party_validator import PolishPartyValidator, validate_nip, validate_regon
@@ -190,11 +190,10 @@ async def submit_invoice_to_ksef(
 
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)
-    metadata: dict[str, Any] = {}
-    if session_token:
-        metadata["session_token"] = session_token
-    if session_token_expires_at:
-        metadata["session_token_expires_at"] = session_token_expires_at
+    metadata = KSeFSubmissionMetadata(
+        session_token=session_token,
+        session_token_expires_at=session_token_expires_at,
+    )
 
     submit_result = await manager.submit_document(xml_content, metadata)
     gate.consume(token)
@@ -238,7 +237,7 @@ async def search_ksef_invoices(
     settings = KSeFSettings()
     manager = KSeFLifecycleManager(settings)
     return await manager.search_documents(
-        {"date_from": date_from, "date_to": date_to, "subject_type": subject_type}
+        KSeFSearchCriteria(date_from=date_from, date_to=date_to, subject_type=subject_type)
     )
 
 

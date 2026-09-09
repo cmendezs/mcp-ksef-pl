@@ -77,7 +77,8 @@ def _render(pyproject: dict[str, str], registry_id: str, repo: str) -> str:
     lines.append("## Docs")
     lines.append("")
     lines.append(
-        f"- [Overview]({base}): the full README — what this server does, installation, configuration, available tools"
+        f"- [Overview]({base}): the full README — what this server does, installation, "
+        "configuration, available tools"
     )
     lines.append(f"- [Tools]({base}tools/): full MCP tool reference")
     lines.append(f"- [Changelog]({base}changelog/): version history")

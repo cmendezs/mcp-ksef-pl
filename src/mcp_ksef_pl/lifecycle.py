@@ -59,6 +59,8 @@ from mcp_einvoicing_core import (
     BaseEInvoicingClient,
     BaseLifecycleManager,
     PlatformError,
+    SearchCriteria,
+    SubmissionMetadata,
     SubmitResult,
 )
 from mcp_einvoicing_core.logging_utils import get_logger
@@ -217,6 +219,31 @@ class KSeFClient(BaseEInvoicingClient):
         return response.json()  # type: ignore[no-any-return]
 
 
+class KSeFSubmissionMetadata(SubmissionMetadata):
+    """Typed metadata for ``KSeFLifecycleManager.submit_document``.
+
+    Added v0.9.0 (CORE-2, core audit Step 8): replaces the untyped
+    ``dict`` this method previously took.
+    """
+
+    session_token: str | None = None
+    session_token_expires_at: str | None = None
+    form_code: dict[str, str] | None = None
+
+
+class KSeFSearchCriteria(SearchCriteria):
+    """Typed criteria for ``KSeFLifecycleManager.search_documents``.
+
+    Added v0.9.0 (CORE-2, core audit Step 8), alongside
+    `KSeFSubmissionMetadata` — see its docstring for the rationale.
+    """
+
+    date_from: str | None = None
+    date_to: str | None = None
+    subject_type: str = "Subject1"
+    date_type: str = "Invoicing"
+
+
 class KSeFLifecycleManager(BaseLifecycleManager):
     """KSeF v2 invoice lifecycle: submit, status, and search.
 
@@ -239,27 +266,27 @@ class KSeFLifecycleManager(BaseLifecycleManager):
     async def submit_document(  # type: ignore[override]
         self,
         document: bytes | str,
-        metadata: dict[str, Any],
+        metadata: KSeFSubmissionMetadata,
     ) -> SubmitResult:
         """Submit a FA(3) XML invoice to KSeF v2.
 
         Internally: fetches MF public key, opens session, sends encrypted
         invoice, closes session.
 
-        metadata keys
-        -------------
-        session_token          : str, optional  — overrides KSEF_SESSION_TOKEN
-        form_code              : dict, optional — overrides the default FA(3) formCode
-        session_token_expires_at: str, optional — ISO-8601 datetime; a warning is logged
-                                  if the token expires within 60 seconds (PL-3.4)
+        Args:
+            document: The FA(3) XML invoice, as bytes or a decoded string.
+            metadata: `KSeFSubmissionMetadata` — ``session_token`` overrides
+                KSEF_SESSION_TOKEN; ``form_code`` overrides the default FA(3)
+                formCode; ``session_token_expires_at`` (ISO-8601) triggers a
+                warning log if the token expires within 60 seconds (PL-3.4).
 
         Returns:
             SubmitResult with session_ref and invoice_ref populated.
             Pass result.compound_id to get_document_status.
         """
         xml = document if isinstance(document, str) else document.decode("utf-8")
-        if token := metadata.get("session_token"):
-            self._client.update_access_token(token)
+        if metadata.session_token:
+            self._client.update_access_token(metadata.session_token)
 
         if not self._client._static_token:
             raise PlatformError(
@@ -267,12 +294,12 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                 message=(
                     "No KSeF AccessToken provided. Obtain one via the KSeF v2 auth flow "
                     "(challenge → authenticate → redeem) and pass it as KSEF_SESSION_TOKEN "
-                    "or metadata['session_token']."
+                    "or metadata.session_token."
                 ),
             )
 
         # PL-3.4: Pre-flight token expiry check.
-        expires_at_str: str = metadata.get("session_token_expires_at", "")
+        expires_at_str: str = metadata.session_token_expires_at or ""
         if expires_at_str:
             try:
                 expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
@@ -298,7 +325,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                     expires_at_str,
                 )
 
-        form_code: dict[str, str] | None = metadata.get("form_code")
+        form_code = metadata.form_code
 
         logger.info("Submitting invoice to KSeF v2 (%s)", self._settings.environment)
 
@@ -367,24 +394,21 @@ class KSeFLifecycleManager(BaseLifecycleManager):
             return await self._client.get_invoice_status(session_ref, invoice_ref)
         return await self._client.get_session_status(document_id)
 
-    async def search_documents(self, filters: dict[str, Any]) -> list[dict[str, Any]]:
+    async def search_documents(self, criteria: KSeFSearchCriteria) -> list[dict[str, Any]]:
         """Query KSeF invoice metadata.
 
-        filters keys
-        ------------
-        date_from    : str  ISO-8601 datetime or YYYY-MM-DD (defaults to today 00:00Z)
-        date_to      : str  ISO-8601 datetime or YYYY-MM-DD (defaults to today 23:59Z)
-        subject_type : str  "Subject1" (seller) | "Subject2" (buyer) | "Subject3"
-                            | "SubjectAuthorized"  (default "Subject1")
-                            Case-insensitive; normalized to the KSeF v2 PascalCase
-                            enum. Raises PlatformError for unrecognised values.
-        date_type    : str  "Issue" | "Invoicing" | "PermanentStorage"
-                            (default "Invoicing")
+        Args:
+            criteria: `KSeFSearchCriteria` — ``date_from``/``date_to`` are
+                ISO-8601 datetime or YYYY-MM-DD (default to today 00:00Z /
+                23:59Z when omitted); ``subject_type`` is case-insensitive
+                and normalized to the KSeF v2 PascalCase enum (raises
+                PlatformError for unrecognised values); ``date_type`` is
+                "Issue" | "Invoicing" | "PermanentStorage".
         """
-        date_from = _to_iso_datetime(filters.get("date_from", str(date.today())), end=False)
-        date_to = _to_iso_datetime(filters.get("date_to", str(date.today())), end=True)
-        subject_type = _normalize_subject_type(filters.get("subject_type", "Subject1"))
-        date_type = filters.get("date_type", "Invoicing")
+        date_from = _to_iso_datetime(criteria.date_from or str(date.today()), end=False)
+        date_to = _to_iso_datetime(criteria.date_to or str(date.today()), end=True)
+        subject_type = _normalize_subject_type(criteria.subject_type)
+        date_type = criteria.date_type
 
         payload: dict[str, Any] = {
             "subjectType": subject_type,
