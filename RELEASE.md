@@ -41,6 +41,34 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.9.0] - 2026-09-09
+#### Added
+- `KSeFSubmissionMetadata` (session_token, session_token_expires_at,
+  form_code) and `KSeFSearchCriteria` (date_from, date_to, subject_type,
+  date_type) in `lifecycle.py`: typed, subclassable pydantic models
+  replacing the untyped `dict` `KSeFLifecycleManager.submit_document` and
+  `.search_documents` previously took, adopting `mcp-einvoicing-core`
+  v1.34.0's `SubmissionMetadata`/`SearchCriteria` contract. Resolves
+  CORE-2 for this package (core audit Step 8,
+  `audit/2026-09-audit-core.md` in the workspace root repo).
+
+#### Changed
+- `server.py`'s `submit_invoice_to_ksef` and `search_ksef_invoices` tool
+  handlers now construct the typed metadata/criteria instead of a plain
+  dict. No tool name, parameter, or return shape changed.
+- `mcp-einvoicing-core` floor pin bumped to `>=1.34.0,<2.0.0`.
+
+#### Fixed
+- A pre-existing, unrelated `ruff` E501 in `docs/scripts/gen_llms_txt.py`
+  that was blocking the lint gate.
+- A version-slot drift in `generator.py`'s hardcoded `_SYSTEM_INFO` string
+  (still `"mcp-ksef-pl/0.8.6"`), caught by `test_metadata.py`'s
+  `test_generator_system_info_matches_pyproject` before tagging.
+
+142/142 tests passing (1 integration test deselected, as usual); `ruff
+check` and `ruff format --check` both clean; cross-package audit re-run
+with zero BLOCKING findings.
+
 ### [0.8.5] - 2026-08-31
 #### Fixed
 - `mcp_ksef_pl/__init__.py`: `__version__` had drifted to `"0.5.1"` while
