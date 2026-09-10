@@ -41,6 +41,15 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.10.0] - 2026-09-10
+#### Changed
+- `_BASE_URLS` (KSeF API test/production URL dict) replaced with
+  `mcp_einvoicing_core.endpoints.EndpointSet`/`EndpointEnvironment`, the same
+  abstraction PL, IT, and ES now share (CORE-5, core audit Step 9, optional,
+  `audit/2026-09-audit-core.md` in the workspace root repo). No behavior
+  change: `KSeFSettings.base_url` resolves to identical URLs.
+- `generator.py`'s `_SYSTEM_INFO` version slot bumped to match.
+
 ### [0.9.0] - 2026-09-09
 #### Added
 - `KSeFSubmissionMetadata` (session_token, session_token_expires_at,
