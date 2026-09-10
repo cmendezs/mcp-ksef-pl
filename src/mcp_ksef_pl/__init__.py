@@ -8,7 +8,7 @@ from .party_validator import PolishPartyValidator, validate_nip, validate_regon
 from .peppol import KSeFPeppolUBLParser, KSeFPeppolUBLSerializer, PeppolUBLGenerator
 from .validator import FA2Validator
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 
 __all__ = [
     # Config

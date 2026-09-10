@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+from mcp_einvoicing_core.endpoints import EndpointEnvironment, EndpointSet
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,9 +13,15 @@ class KSeFEnvironment(StrEnum):
 # Reconciled against the CIRFMF api-changelog.md through v2.1.1 (2026-02-13);
 # the v2.0.1-2.1.1 delta is auth/permissions-only and does not affect these URLs.
 # The v1 domain (ksef.mf.gov.pl/api) and the demo environment are not part of v2.
-_BASE_URLS: dict[KSeFEnvironment, str] = {
-    KSeFEnvironment.PRODUCTION: "https://api.ksef.mf.gov.pl/v2",
-    KSeFEnvironment.TEST: "https://api.ksef-test.mf.gov.pl/v2",
+_BASE_URL_ENDPOINT = EndpointSet(
+    production="https://api.ksef.mf.gov.pl/v2",
+    sandbox="https://api.ksef-test.mf.gov.pl/v2",
+)
+
+# KSeFEnvironment.TEST maps to core's SANDBOX; KSeF has no separate "sandbox" name.
+_ENDPOINT_ENV: dict[KSeFEnvironment, EndpointEnvironment] = {
+    KSeFEnvironment.PRODUCTION: EndpointEnvironment.PRODUCTION,
+    KSeFEnvironment.TEST: EndpointEnvironment.SANDBOX,
 }
 
 
@@ -41,4 +48,4 @@ class KSeFSettings(BaseSettings):
 
     @property
     def base_url(self) -> str:
-        return _BASE_URLS[self.environment]
+        return _BASE_URL_ENDPOINT.resolve(_ENDPOINT_ENV[self.environment])
