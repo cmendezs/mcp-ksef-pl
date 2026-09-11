@@ -1,9 +1,8 @@
 // Astro Content Layer loader that renders this package's existing Markdown files directly —
 // README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, docs/TOOLS.md —
 // with no copying, no splitting into pieces, and no separate content to keep in sync. Every
-// page on the docs site is the real file, read fresh at every build. See
-// context-library/templates/docs-site-template.md's "Content sourcing" section for why this
-// replaced an earlier design that hand-copied README sections into separate page files.
+// page on the docs site is the real file, read fresh at every build. This replaced an earlier
+// design that hand-copied README sections into separate page files.
 //
 // Starlight's docsSchema() requires a `title` in frontmatter; none of the source files have
 // front matter at all. This loader derives `title` from the file's own leading `# ` heading

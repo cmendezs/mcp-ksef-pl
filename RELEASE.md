@@ -45,8 +45,7 @@ mcp-publisher publish
 #### Changed
 - `_BASE_URLS` (KSeF API test/production URL dict) replaced with
   `mcp_einvoicing_core.endpoints.EndpointSet`/`EndpointEnvironment`, the same
-  abstraction PL, IT, and ES now share (CORE-5, core audit Step 9, optional,
-  `audit/2026-09-audit-core.md` in the workspace root repo). No behavior
+  abstraction PL, IT, and ES now share (CORE-5, core audit Step 9, optional). No behavior
   change: `KSeFSettings.base_url` resolves to identical URLs.
 - `generator.py`'s `_SYSTEM_INFO` version slot bumped to match.
 
@@ -58,8 +57,7 @@ mcp-publisher publish
   replacing the untyped `dict` `KSeFLifecycleManager.submit_document` and
   `.search_documents` previously took, adopting `mcp-einvoicing-core`
   v1.34.0's `SubmissionMetadata`/`SearchCriteria` contract. Resolves
-  CORE-2 for this package (core audit Step 8,
-  `audit/2026-09-audit-core.md` in the workspace root repo).
+  CORE-2 for this package (core audit Step 8).
 
 #### Changed
 - `server.py`'s `submit_invoice_to_ksef` and `search_ksef_invoices` tool
@@ -137,7 +135,7 @@ Raises the core lower-bound pin to `>=1.27.0` (was `>=1.20.0`). Found during the
 
 ### [0.6.0] - 2026-08-20
 #### Added
-- **[CORE-EN16931-BASE-SCHEMATRON-1]** `validate_peppol_invoice` tool, closing the gap where this package's Peppol path (`generate_peppol_invoice`/`peppol/parser.py`/`peppol/serializer.py`) had no validation tool at all. Delegates to `mcp-einvoicing-core`'s bundled CEN EN16931 base Schematron (`en16931_base_schematron_validator`, core >= 1.18.0). Checks the ~50 CEN `BR-*` structural/arithmetic rules only — does NOT check the Peppol-specific overlay (profile/process ID registration, `EndpointID` scheme, narrowed code lists). Every result carries `metadata.scope="en16931-base-only"` and an explicit warning; never presented as full Peppol BIS3 conformance. See `context-library/decisions/peppol-schematron-artifact.md` for why the overlay itself still cannot ship (no confirmed OpenPeppol redistribution rights).
+- **[CORE-EN16931-BASE-SCHEMATRON-1]** `validate_peppol_invoice` tool, closing the gap where this package's Peppol path (`generate_peppol_invoice`/`peppol/parser.py`/`peppol/serializer.py`) had no validation tool at all. Delegates to `mcp-einvoicing-core`'s bundled CEN EN16931 base Schematron (`en16931_base_schematron_validator`, core >= 1.18.0). Checks the ~50 CEN `BR-*` structural/arithmetic rules only — does NOT check the Peppol-specific overlay (profile/process ID registration, `EndpointID` scheme, narrowed code lists). Every result carries `metadata.scope="en16931-base-only"` and an explicit warning; never presented as full Peppol BIS3 conformance. The overlay itself still cannot ship (no confirmed OpenPeppol redistribution rights).
 
 #### Changed
 - Lower-bound pin on `mcp-einvoicing-core` raised to `>=1.18.0` (was `>=1.15.0`) for the new `schematron_artifacts` module.

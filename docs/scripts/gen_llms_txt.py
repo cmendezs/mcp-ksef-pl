@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Generate ``docs/public/llms.txt`` from in-repo sources only.
 
-This is the deterministic fallback/override for the curated top-level ``llms.txt`` — see
-context-library/decisions/docs-site.md and context-library/templates/docs-site-template.md's
-"llms.txt / llms-full.txt contract" section for why this exists alongside the
+This is the deterministic fallback/override for the curated top-level ``llms.txt``,
+existing alongside the
 ``starlight-llms-txt`` plugin's own ``/llms-full.txt`` output: the plugin's exact API and
 maintenance status are [Unverified] from the environment this script was authored in, so the
 curated index must not depend solely on it.

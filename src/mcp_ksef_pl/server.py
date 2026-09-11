@@ -307,8 +307,8 @@ async def validate_peppol_invoice(xml_content: str) -> DocumentValidationResult:
     registration, EndpointID scheme, narrowed code lists) — the result's
     metadata.scope is "en16931-base-only", and a warning is included. This is
     not a full Peppol BIS3 conformance check; a document that passes may
-    still be rejected by a real Peppol Access Point. See
-    context-library/decisions/peppol-schematron-artifact.md for why.
+    still be rejected by a real Peppol Access Point (no confirmed
+    OpenPeppol redistribution rights for the overlay rules).
 
     Call this after generate_peppol_invoice to check the generated output.
     Returns a DocumentValidationResult with errors and warnings.

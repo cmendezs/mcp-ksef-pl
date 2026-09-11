@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Dutch-identifier rules — all inside the Peppol-specific Schematron overlay, which this package
   has never run (no `peppol/` business-rule validation exists here at all; `peppol/generator.py`,
   `parser.py`, `serializer.py` only delegate to core's UBL serializer/parser). Documentation-only
-  pin refresh (`context-library/countries/pl.md` at the workspace root); no code change.
+  pin refresh; no code change.
 
 ---
 

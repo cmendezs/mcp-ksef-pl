@@ -10,9 +10,7 @@ rules). Does NOT check the Peppol-specific overlay (profile/process ID
 registration, EndpointID scheme, narrowed code lists) — the Peppol overlay
 Schematron has no confirmed redistribution rights and is not bundled
 anywhere. Every result carries metadata.scope="en16931-base-only" and an
-explicit warning; never present this as full Peppol BIS3 conformance. See
-context-library/decisions/peppol-schematron-artifact.md (root repo) for the
-full licensing investigation.
+explicit warning; never present this as full Peppol BIS3 conformance.
 """
 
 from __future__ import annotations
@@ -33,7 +31,7 @@ _EN16931_BASE_ONLY_SCOPE_WARNING = (
     "(structural + arithmetic/totals) only. Peppol-specific overlay rules "
     "(profile/process ID registration, EndpointID scheme, narrowed code "
     "lists) are NOT checked — this is not a full Peppol BIS3 conformance "
-    "result. See context-library/decisions/peppol-schematron-artifact.md."
+    "result (no confirmed OpenPeppol redistribution rights for the overlay)."
 )
 
 # Emitted when core's bundled EN16931-base Schematron could not be loaded
