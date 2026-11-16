@@ -136,18 +136,30 @@ class KSeFClient(BaseEInvoicingClient):
         encrypted_symmetric_key: str,
         initialization_vector: str,
         form_code: dict[str, str] | None = None,
+        public_key_id: str | None = None,
     ) -> str:
         """POST /sessions/online — open an interactive session.
+
+        Args:
+            encrypted_symmetric_key: Base64 AES key wrapped with the MF public key.
+            initialization_vector: Base64 CBC IV.
+            form_code: Invoice schema declaration; defaults to FA (3).
+            public_key_id: ``publicKeyId`` of the MF certificate used to wrap the key
+                (``encryption.publicKeyId``, nullable, 44 characters). Sent when
+                provided so KSeF can tell which key was used across MF key rotation.
 
         Returns:
             Session referenceNumber.
         """
+        encryption: dict[str, str] = {
+            "encryptedSymmetricKey": encrypted_symmetric_key,
+            "initializationVector": initialization_vector,
+        }
+        if public_key_id:
+            encryption["publicKeyId"] = public_key_id
         payload: dict[str, Any] = {
             "formCode": form_code or _FORM_CODE_FA3,
-            "encryption": {
-                "encryptedSymmetricKey": encrypted_symmetric_key,
-                "initializationVector": initialization_vector,
-            },
+            "encryption": encryption,
         }
         response = await self._request("POST", "/sessions/online", json=payload)
         data: dict[str, Any] = response.json()
@@ -331,7 +343,9 @@ class KSeFLifecycleManager(BaseLifecycleManager):
 
         # Step 1: fetch the MF public key for symmetric key encryption.
         certs = await self._client.get_public_key_certificates()
-        cert_b64 = _pick_encryption_cert(certs)
+        selected_cert = _select_encryption_cert(certs)
+        cert_b64: str = selected_cert["certificate"]
+        public_key_id = _valid_public_key_id(selected_cert.get("publicKeyId"))
 
         # PL-3.6: verify the cert's SPKI fingerprint against the pinned
         # allowlist before trusting it. No-op unless verify_mf_key_pinning is
@@ -356,6 +370,7 @@ class KSeFLifecycleManager(BaseLifecycleManager):
                 encrypted_symmetric_key=envelope.encrypted_symmetric_key,
                 initialization_vector=envelope.initialization_vector,
                 form_code=form_code,
+                public_key_id=public_key_id,
             )
             logger.info("KSeF session opened: %s", session_ref)
 
@@ -437,9 +452,33 @@ class KSeFLifecycleManager(BaseLifecycleManager):
 def _pick_encryption_cert(certs: list[dict[str, Any]]) -> str:
     """Return the Base64 DER certificate suitable for SymmetricKeyEncryption.
 
+    Thin wrapper over `_select_encryption_cert`; see it for the selection rules.
+    """
+    return str(_select_encryption_cert(certs)["certificate"])
+
+
+def _valid_public_key_id(value: object) -> str | None:
+    """Return ``publicKeyId`` when it matches the OpenAPI constraint (44 characters).
+
+    `PublicKeyCertificate.publicKeyId` is declared with ``minLength``/``maxLength`` 44;
+    anything else is dropped (with a warning) rather than sent, since the request field
+    is nullable and a malformed value would be rejected by KSeF.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    if len(value) != 44:
+        logger.warning("Ignoring publicKeyId with unexpected length %d (expected 44)", len(value))
+        return None
+    return value
+
+
+def _select_encryption_cert(certs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return the certificate object suitable for SymmetricKeyEncryption.
+
     KSeF v2 returns multiple certificates with different usages.  Select the
     one whose usage array contains "SymmetricKeyEncryption" and whose validTo
-    date has not yet passed (PL-3.1).
+    date has not yet passed (PL-3.1). The whole object is returned so the caller
+    can also read ``publicKeyId``.
 
     Raises:
         PlatformError: If no non-expired suitable certificate is found.
@@ -464,7 +503,7 @@ def _pick_encryption_cert(certs: list[dict[str, Any]]) -> str:
             except ValueError:
                 # Cannot parse validTo — accept and let KSeF reject if invalid
                 pass
-        return certificate
+        return cert
     raise PlatformError(
         status_code=502,
         message=(

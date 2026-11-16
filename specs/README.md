@@ -1,9 +1,11 @@
 # mcp-ksef-pl — Specification assets
 
 Reference files for KSeF FA(2) / FA(3) and KSeF API v2 (reconciled against the
-CIRFMF `api-changelog.md` through production release v2.1.1, 2026-02-13 — see
-GitHub issue #7). The v2.0.1-2.1.1 delta is auth/permissions-only and does not
-affect any endpoint or contract this package implements.
+CIRFMF `api-changelog.md` through production release v2.9.0, 2026-10-15; the
+changelog file also lists v2.10.0, which is TEST-only at the time of retrieval and
+is not reflected in the OpenAPI file). Of the v2.1.1 to v2.9.0 deltas only the
+`encryption.publicKeyId` selector (v2.5.0) affects this package's session-open call;
+the rest is auth, permissions, collective identifiers, rate limits and documentation.
 All files sourced from the official CIRFMF ksef-docs repository
 (`https://github.com/CIRFMF/ksef-docs`).
 
@@ -26,7 +28,8 @@ not part of the wheel.
 
 | File | Description | Version | Retrieved |
 |---|---|---|---|
-| `ksef-api-v2-openapi.json` | KSeF REST API v2 OpenAPI specification | v2 | 2026-05-18 |
+| `ksef-api-v2-openapi.json` | KSeF REST API v2 OpenAPI specification (production release v2.9.0) | v2.9.0 | 2026-11-16 |
+| `ksef-api-changelog.md` | CIRFMF API changelog (Polish), through v2.10.0 (TEST) | v2.10.0 | 2026-11-16 |
 | `ksef-v2-fa3-migration-announcement-20250630.pdf` | Official MF announcement for FA(3) mandate and KSeF v2 rollout | — | 2026-05-18 |
 
 ## Key namespaces

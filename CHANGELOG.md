@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Interactive session open (`POST /sessions/online`) now sends `encryption.publicKeyId`, the identifier of the Ministry of Finance certificate used to wrap the session key (KSeF API v2.5.0 selector; 44 characters per the OpenAPI). Without it, a Ministry key rotation could make KSeF pick a different key than the one used for encryption. The value is read from the certificate selected for `SymmetricKeyEncryption` and omitted when KSeF does not return one or returns a malformed one.
+
+### Changed
+- Reference OpenAPI specification refreshed to KSeF API v2.9.0 (production 2026-10-15) and the API changelog added to the reference specs. Between v2.7.1 and v2.9.0 no other change affects the endpoints this package calls: v2.9.0 adds `OwnerPermissionScope` to a permissions query and documents error code `21001`; v2.8.x and v2.7.x concern collective identifiers, rate limits and documentation.
+
 ---
 
 ## [0.10.1] - 2026-09-12

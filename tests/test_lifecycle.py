@@ -11,7 +11,9 @@ from mcp_ksef_pl.lifecycle import (
     KSeFSearchCriteria,
     KSeFSubmissionMetadata,
     _pick_encryption_cert,
+    _select_encryption_cert,
     _to_iso_datetime,
+    _valid_public_key_id,
 )
 
 
@@ -85,6 +87,47 @@ class TestPickEncryptionCert:
 
         with pytest.raises(PlatformError):
             _pick_encryption_cert([])
+
+
+class TestPublicKeyId:
+    _KEY_ID = "A" * 43 + "="
+
+    def test_select_returns_whole_cert_with_public_key_id(self) -> None:
+        certs = [
+            {"certificate": "cert1==", "usage": ["KsefTokenEncryption"], "publicKeyId": "x" * 44},
+            {
+                "certificate": "cert2==",
+                "usage": ["SymmetricKeyEncryption"],
+                "publicKeyId": self._KEY_ID,
+            },
+        ]
+        selected = _select_encryption_cert(certs)
+        assert selected["certificate"] == "cert2=="
+        assert selected["publicKeyId"] == self._KEY_ID
+
+    def test_valid_public_key_id_enforces_openapi_length(self) -> None:
+        assert _valid_public_key_id(self._KEY_ID) == self._KEY_ID
+        assert _valid_public_key_id("short") is None
+        assert _valid_public_key_id(None) is None
+        assert _valid_public_key_id("") is None
+
+    @pytest.mark.asyncio
+    async def test_open_online_session_sends_public_key_id(
+        self, test_settings: KSeFSettings
+    ) -> None:
+        manager = KSeFLifecycleManager(test_settings)
+        with patch.object(
+            manager._client,
+            "_request",
+            new_callable=AsyncMock,
+            return_value=MagicMock(json=lambda: {"referenceNumber": "REF"}),
+        ) as request:
+            await manager._client.open_online_session("KEY==", "IV==", public_key_id=self._KEY_ID)
+            await manager._client.open_online_session("KEY==", "IV==")
+        with_id = request.await_args_list[0].kwargs["json"]["encryption"]
+        without_id = request.await_args_list[1].kwargs["json"]["encryption"]
+        assert with_id["publicKeyId"] == self._KEY_ID
+        assert "publicKeyId" not in without_id
 
 
 class TestToIsoDatetime:

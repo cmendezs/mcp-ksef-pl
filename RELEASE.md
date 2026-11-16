@@ -41,6 +41,12 @@ mcp-publisher publish
 
 ## Changelog
 
+### [0.10.2] - 2026-11-17
+
+- Interactive session open now sends `encryption.publicKeyId`, the identifier of the Ministry of Finance certificate used to wrap the session key (KSeF API v2.5.0 selector, 44 characters). The value is omitted when KSeF returns none or a malformed one.
+- Reference OpenAPI specification refreshed to KSeF API v2.9.0 (production 2026-10-15); no other delta in v2.7.1 to v2.9.0 affects the endpoints this package calls.
+- 145 tests passing; audit gate 0 blocking.
+
 ### [0.10.1] - 2026-09-12
 #### Changed
 - Lower-bound pin on `mcp-einvoicing-core` raised to `>=1.34.1` (was `>=1.34.0`). This package's own CI now runs `CHECK_PUBLIC_HYGIENE`, the pre-publish audit check that blocks accidental citations of the private orchestration repo.

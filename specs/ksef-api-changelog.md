@@ -1,0 +1,1097 @@
+## Zmiany w API 2.0
+
+### Wersja 2.10.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     16.11.2026 |
+| **DEMO**   |     - |
+| **PROD**   |     - |
+
+- **Tokeny KSeF**
+  - Dodano nowe rewizje operacji:
+    - **Wygenerowanie nowego tokena (POST `/tokens/rev2`)** z możliwością określenia okresu ważności,
+    - **Pobranie listy wygenerowanych tokenów (GET `/tokens/rev2`)**,
+    - **Pobranie statusu tokena (GET `/tokens/rev2/{referenceNumber}`)**.
+  - Dotychczasowe operacje generowania tokena, pobierania listy i statusu oznaczono jako przestarzałe. Zostaną wycofane **30.09.2027 r.**
+  - Dodano **zatwierdzenie tokena (POST `/tokens/{referenceNumber}/approve`)**.
+  - Dodano testową operację POST `/testdata/tokens/{referenceNumber}/expire-approval`, symulującą upływ terminu zatwierdzenia tokena przez zmianę statusu z `AwaitingApproval` na `ApprovalExpired`. Operacja jest dostępna wyłącznie na środowiskach testowych.
+  - Unieważnienie tokena (DELETE `/tokens/{referenceNumber}`): 
+    - uzupełniono OpenAPI o istniejący kod błędu `21409` (token o podanym identyfikatorze nie istnieje),
+    - dodano nowy kod `26004` (status tokena nie pozwala na jego odwołanie).
+  - Dodano limit liczby tokenów KSeF rev2 w odpowiedzi operacji pobierania limitów dla bieżącego kontekstu.
+
+- **Uwierzytelnianie**
+  - Zmieniono sposób realizacji zapowiedzianego w wersji 2.1.0 wycofania właściwości `authenticationMethod`. Właściwość pozostanie dostępna w dotychczasowych endpointach, natomiast nowe rewizje operacji nie będą jej zawierać:
+    - **Pobranie statusu uwierzytelniania (GET `/auth/rev2/{referenceNumber}`)**,
+    - **Pobranie listy aktywnych sesji (GET `/auth/sessions/rev2`)**.
+  - W nowych rewizjach informacje o metodzie uwierzytelniania są udostępniane we właściwości `authenticationMethodInfo`.
+  - Dotychczasowe endpointy GET `/auth/{referenceNumber}` oraz GET `/auth/sessions` pozostaną dostępne i wspierane do **15 czerwca 2027 r.** Zapowiedziane wcześniej usunięcie właściwości `authenticationMethod` w dniu 16 listopada 2026 r. nie nastąpi. Przed zakończeniem okresu wsparcia należy dostosować integracje do nowych rewizji operacji.
+  - Pobranie statusu uwierzytelniania: dodano kod statusu `450` dla próby uwierzytelnienia tokenem KSeF rev2 poza okresem ważności, ze szczegółem "Token poza okresem ważności".
+
+- **Uprawnienia**  
+  Dodano obsługę uprawnienia `CollectiveIdentifierManage` (zarządzanie identyfikatorami zbiorczymi) w operacjach:
+  - nadawania uprawnień administratora podmiotu unijnego (POST `/permissions/eu-entities/administration/grants`),
+  - nadawania uprawnień reprezentanta podmiotu unijnego (POST `/permissions/eu-entities/grants`),
+  - wyszukiwania nadanych uprawnień (POST `/permissions/query/eu-entities/grants`). 
+
+- **OpenAPI**
+  - Dodano do odpowiedzi wycofywanych endpointów nagłówki `Deprecation` i `Sunset`, wskazujące odpowiednio moment oznaczenia operacji jako przestarzałej oraz moment jej wyłączenia. Po wyłączeniu operacja będzie zwracać `410 Gone`.
+  - Poprawiono przykłady odpowiedzi GET `/auth/{referenceNumber}`: błędy certyfikatów mają kod `460` zamiast `400`.
+  - Drobne aktualizacje opisów i przykładów.
+
+- **Dane testowe**  
+  W żądaniu POST `/testdata/limits/subject/certificate` oznaczono właściwość `enrollment.maxEnrollments` i `certificate.maxCertificates` jako wymagane.
+
+### Wersja 2.9.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     13.10.2026 |
+| **DEMO**   |     13.10.2026 |
+| **PROD**   |     15.10.2026 |
+
+- **Uprawnienia**  
+  Rozszerzono POST `/permissions/query/personal/grants` o `OwnerPermissionScope`, zwracające uprawnienia właścicielskie.
+
+- **OpenAPI**  
+  Uzupełniono dokumentację odpowiedzi błędów o kod `21001` (Nieczytelna treść) ze szczegółami {`szczegółowy opis błędu`}. Zmiana ma charakter dokumentacyjny; kod był zwracany przez API również wcześniej.
+
+### Wersja 2.8.1
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     22.09.2026 |
+| **DEMO**   |     23.09.2026 |
+| **PROD**   |     23.09.2026 |
+
+- **Identyfikatory zbiorcze**  
+  - Rozszerzono obsługę błędów przy generowaniu IZ (POST `/collective-identifiers`): doprecyzowano kod `71001` oraz dodano kody `71004` dla faktur różnych sprzedawców i `71005` dla powtórzonego numeru KSeF w żądaniu.
+  - Uzupełniono obsługę błędów w endpointach GET `/collective-identifiers/ksef/{ksefNumber}`, POST /`collective-identifiers/query` oraz POST `/collective-identifiers/invoices` o kod `21418` ("Przesłany token kontynuacji jest nieprawidłowy").
+
+- **Uprawnienia**  
+  - Rozszerzono POST `/permissions/entities/grants` oraz POST `/permissions/indirect/grants` o możliwość nadawania uprawnienia `CollectiveIdentifierManage`.
+  - Rozszerzono odpowiedź POST `/permissions/query/entities/grants` o wartość `CollectiveIdentifierManage` w `permissionScope`.
+
+### Wersja 2.8.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     14.09.2026 |
+| **DEMO**   |     15.09.2026 |
+| **PROD**   |     23.09.2026 |
+
+- **Limity API**  
+  - Wydzielono operacje zamykania sesji do osobnych grup limitów i zwiększono ich wartości do poziomu dwukrotnie wyższego niż limity dla operacji otwierania sesji:
+    - sesja interaktywna: `20/60/240`,
+    - sesja wsadowa: `20/40/120`.
+  - Uzupełniono odpowiedź GET `/rate-limits` o grupę `anonymous`, zawierającą limity dla anonimowych operacji API. Zmiana ma charakter porządkujący — limity obowiązywały już wcześniej, ale nie były zwracane przez ten endpoint.
+  - Rozszerzono odpowiedź GET `/rate-limits` o grupę `global`, przeznaczoną dla **przyszłych globalnych limitów API** naliczanych per adres IP. Mechanizm jest obecnie wyłączony i nie wpływa na integracje. Będzie dotyczył przede wszystkim dostawców aplikacji obsługujących dużą liczbę podmiotów i ma na celu zwiększenie bezpieczeństwa ich integracji. Szczegóły działania i harmonogram włączenia zostaną przedstawione w odrębnej komunikacji.
+
+- **Wysyłka faktur w sesji interaktywnej (POST `/sessions/online/{referenceNumber}/invoices`)**  
+  Dodano kod błędu `21184` ("Sesja tymczasowo niedostępna"), zwracany z HTTP 400 w przypadku czasowego wstrzymania możliwości wysyłki faktur w ramach istniejącej sesji. Rekomendowane jest otwarcie nowej sesji i kontynuowanie wysyłki.
+
+- **Wysyłka faktur**  
+  Na środowiskach testowych dodano możliwość włączenia walidacji numerów NIP oraz identyfikatorów wewnętrznych podmiotów za pomocą nagłówka `X-KSeF-Feature`: `subject-identifier-validation`.
+
+- **OpenAPI**  
+  - Rozszerzono słownik kodów krajów o wartości: `CNH`, `VED`, `XTS`, `ZWG`, `SLE`; zmiana dotyczy obszarów "Pobieranie faktur" oraz "Identyfikatory zbiorcze".
+  - Uzupełniono ograniczenia długości `PublicKeyCertificate.publicKeyId` - dodano `minLength/maxLength: 44`.
+  - Zaktualizowano definicję `ForbiddenProblemDetails` dla odpowiedzi 403 - usunięto timestamp z listy pól `required`. Zmiana dostosowuje specyfikację do rzeczywistego zachowania API, m.in. dla `security-service-blocked`.
+  - Drobne aktualizacje opisów i przykładów.
+
+- **Dane testowe**  
+  Uzupełniono dokumentację odpowiedzi `400 Bad Request` dla POST i DELETE `/testdata/limits/context/session` o standardowy kod błędu `21405` ("Błąd walidacji danych wejściowych").
+
+### Wersja 2.7.1
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     26.08.2026 |
+| **DEMO**   |     15.09.2026 |
+| **PROD**   |     23.09.2026 |
+
+- **Identyfikatory zbiorcze**  
+  - Zmieniono endpoint GET `/collective-identifiers/{collectiveIdentifierNumber}/invoices` na POST /`collective-identifiers/invoices`. Metoda przyjmuje listę maksymalnie 10 identyfikatorów zbiorczych zamiast pojedynczego numeru. Odpowiedź rozszerzono o `collectiveIdentifierNumber`, zwiększono maksymalny `pageSize` z 200 do 500, objęto endpoint limitami API oraz dodano przykład odpowiedzi.
+  - Zwiększono limity API z `10/60/120` do `20/120/240` dla wszytkich endpointów z grupy `collectiveIdentifier`.
+  - Dodano przykłady odpowiedzi.
+
+- **Limity identyfikatorów zbiorczych**  
+  Rozszerzono limity bieżącego kontekstu o `collectiveIdentifier.maxInvoices` - maksymalną liczbę faktur w pojedynczym IZ. Limit jest zwracany przez GET `/limits/context`, a na środowisku TEST może być modyfikowany przez POST `/testdata/limits/context/session`.
+
+- **Eksport paczki faktur (POST `/invoices/exports`). Pobranie listy metadanych faktur (POST `/invoices/query/metadata`)**    
+  Zwiększono maksymalny zakres dateRange z 3 miesięcy do 100 dni liczonych w UTC. Zmiana jest kompatybilna wstecznie.
+
+- **Pobranie statusu eksportu paczki faktur (GET `/invoices/exports/{referenceNumber}`)**  
+  Rozszerzono odpowiedź o właściwość `compressionType`, wskazującą typ kompresji paczki.  
+
+- **OpenAPI**  
+  Uzupełniono opis `X-System-Warning` o sposób testowania ostrzeżeń z wykorzystaniem nagłówka `X-Test-System-Warning`.  
+
+### Wersja 2.7.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     21.07.2026 |
+| **DEMO**   |     - |
+| **PROD**   |     - |
+
+- **Identyfikatory zbiorcze**  
+  Dodano obsługę identyfikatorów zbiorczych oraz nowe uprawnienie `CollectiveIdentifierManage`, wymagane do wykonywania operacji na IZ.
+
+- **Dane testowe**  
+  Dodano endpoint PUT `/testdata/certificates/{serialNumber}` umożliwiający skrócenie okresu ważności certyfikatu KSeF poprzez zmianę `validTo`, na potrzeby symulowania scenariuszy wygaśnięcia certyfikatu na środowiskach testowych.
+
+- **OpenAPI**  
+  Ujednolicono opisy wymaganych uprawnień: gdy wystarczy posiadanie jednego z kilku uprawnień, zastosowano sformułowanie „Wymagane jedno z uprawnień”, a w przypadku pojedynczego uprawnienia — „Wymagane uprawnienie”. Zmiana ma charakter dokumentacyjny; zachowanie API pozostaje bez zmian.
+
+### Wersja 2.6.1
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     10.06.2026 |
+| **DEMO**   |     11.06.2026 |
+| **PROD**   |     16.06.2026 |
+
+- **Pobranie statusu uwierzytelniania (GET `/auth/{referenceNumber})`**  
+  Ujednolicono komunikaty w polu details dla statusu `450` ("Uwierzytelnianie zakończone niepowodzeniem z powodu błędnego tokenu") - treści są teraz zwracane w języku polskim, zgodnie z dokumentacją. Dodatkowo uzupełniono dokumentację o kilka wariantów details, które występowały w odpowiedziach API, ale nie były wcześniej opisane.
+
+- **Eksport paczki faktur (POST `/invoices/exports`)**  
+  Poprawiono dzielenie paczek w trybie `onlyMetadata=true` dla eksportów obejmujących powyżej 10 000 faktur - wcześniej `_metadata.json` mógł zawierać 10 001 rekordów w jednej paczce, a `isTruncated` pozostawało ustawione na `false`. Paczki są dzielone poprawnie, a wartość `isTruncated` odzwierciedla rzeczywisty stan wyniku.
+
+- **OpenAPI**  
+  Zaktualizowano odnośniki do dokumentacji: CIRFMF/ksef-docs -> CIRFMF/ksef-api.
+
+### Wersja 2.6.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     19.05.2026 |
+| **DEMO**   |     21.05.2026 |
+| **PROD**   |     26.05.2026 |
+
+  - **Wysyłka wsadowa (POST `/sessions/batch`) oraz eksport paczki faktur (POST `/invoices/exports`)**  
+  Dodano typ kompresji `TarGz` jako alternatywę dla `Zip`. Format `TarGz` jest rekomendowany ze względu na możliwość uzyskania lepszego współczynnika kompresji dla paczek zawierających wiele podobnych dokumentów XML. Domyślnym typem kompresji pozostaje `Zip` w celu zachowania kompatybilności.
+
+- **Ostrzeżenia techniczne (`X-System-Warning`)**  
+  Dodano opcjonalny nagłówek odpowiedzi `X-System-Warning`, pozwalający przekazać ostrzeżenia techniczne bez wpływu na wynik operacji (np. gdy wykryto zachowanie, które w przyszłości może skutkować odrzuceniem żądania). Na środowisku TEST ostrzeżenie można wymusić nagłówkiem `X-Test-System-Warning`.
+
+- **OpenAPI**  
+  - Ujednolicono wyrażenia regularne dla adresów IP (`Ip4Address`, `Ip4Range`, `Ip4Mask`) w POST `/auth/ksef-token` - zastosowano te same patterny, co w schemie AuthTokenRequest 2.1.
+  - Uzupełniono brakujący opis dla `InvoiceMetadataThirdSubject` ("Identyfikator podmiotu trzeciego.").
+
+### Wersja 2.5.0
+| Środowisko | Data wdrożenia |
+| ---------- | -------------: |
+| **TEST**   |     06.05.2026 |
+| **DEMO**   |     07.05.2026 |
+| **PROD**   |     11.05.2026 |
+
+- **Klucze publiczne KSeF (rotacja i selekcja kluczy)**  
+  Wprowadzono przekazywanie selektora `publicKeyId` w żądaniach do operacji, w których klient szyfruje dane kluczem publicznym KSeF - umożliwia to jednoznaczną identyfikację użytego klucza oraz poprawną i automatyczną obsługę re-certyfikacji/rotacji. Rozszerzenie dotyczy endpointów: 
+    - POST `/auth/ksef-token`, 
+    - POST `/sessions/online`, 
+    - POST `/sessions/batch`, 
+    - POST `/invoices/exports`.  
+  
+  Dodatkowo uzupełniono [dokumentację](bezpieczenstwo/klucze-publiczne-do-szyfrowania.md) o opis publikacji i rotacji kluczy publicznych.
+
+- **Uwierzytelnienie z wykorzystaniem podpisu XAdES (POST `/auth/xades-signature`)**  
+  - Rozszerzono obsługę dokumentu `AuthTokenRequest` o wersję schemy 2.1 (przy zachowaniu kompatybilności ze schemą 2.0).
+  - W schemie 2.1 zaktualizowano wyrażenia regularne dla adresów IP (`Ip4Address`, `Ip4Range`, `Ip4Mask`), aby były zgodne z typowymi parserami.
+
+- **Limity API**  
+  Zrównano domyślne limity API na środowisku TEST z wartościami obowiązującymi na PROD. Na środowisku TEST nadal dostępne są endpointy z grupy `/testdata/rate-limits`, umożliwiające testowanie niestandardowych profili limitów.
+
+- **OpenAPI**  
+  - Uzupełniono opisy parametru `certificateSerialNumber` o format i ograniczenia (`minLength/maxLength: 16`, `pattern: ^[0-9A-F]{16}$`). Zmiana ma charakter dokumentacyjny - nie wprowadza dodatkowej walidacji po stronie API i nie zmienia zachowania endpointów (np. POST `/certificates/retrieve`).
+  - Usunięto wartości związane z fakturami RR, wcześniej oznaczone jako deprecated (m.in. `InvoiceQueryFormType.RR`).
+
+### Wersja 2.4.0
+
+| Środowisko | Data wdrożenia | Uwagi                                                            |
+| ---------- | -------------: | ---------------------------------------------------------------- |
+| **TEST**   |     10.04.2026 | —                                                                |
+| **DEMO**   |     13.04.2026 | —                                                                |
+| **PROD**   |     16.04.2026 | Zaostrzenie walidacji XML zacznie obowiązywać od **16.07.2026**. |
+
+
+- **Tokeny KSeF**
+  - Umożliwiono wykonywanie operacji na tokenie użytym do uwierzytelnienia bez dodatkowych uprawnień:
+    - DELETE `/tokens/{referenceNumber}` pozwala unieważnić własny token (ten, którym nastąpiło uwierzytelnienie) bez `CredentialsManage`,
+    - GET `/tokens` oraz GET `/tokens/{referenceNumber}` zwracają informacje o tokenie użytym do uwierzytelnienia również wtedy, gdy nie posiada on uprawnień `CredentialsManage` / `CredentialsRead`.
+  - Aktualizacja opisów:
+    - DELETE `/tokens/{referenceNumber}`,
+    - GET `/tokens/`
+
+- **Wysyłka faktur**  
+  - Zaostrzono weryfikację treści XML: 
+    - dokument nie może zawierać niezalecanych znaków Unicode wskazanych w specyfikacji XML W3C,
+    - dokument nie może zawierać instrukcji przetwarzania XML (processing instructions).  
+
+    Szczegóły: [Weryfikacja faktury](/faktury/weryfikacja-faktury.md).
+
+- **Retencja statusów operacji asynchronicznych**  
+  Wprowadzono retencję dla technicznych odpowiedzi i statusów operacji asynchronicznych (służących do krótkotrwałego odpytywania postępu i odbioru wyniku). Retencja nie dotyczy danych biznesowych będących skutkiem wykonania operacji. Po upływie okresu retencji odpytywanie statusu zwraca `410 Gone`.
+  Obowiązujące okresy retencji:
+    - Uwierzytelnianie - GET `/auth/{referenceNumber}`: 7 dni,
+    - Eksport faktur - GET `/invoices/exports/{referenceNumber}`: 7 dni,
+    - Wydanie certyfikatu - GET `/certificates/enrollments/{referenceNumber}`: 30 dni,
+    - Nadanie/odebranie uprawnień - GET `/permissions/operations/{referenceNumber}`: 30 dni.  
+    
+  Dla statusów sesji oraz wysyłki faktur retencja nie jest obecnie planowana.
+
+- **OpenAPI**  
+  - Udostępniono opcjonalny format błędów Problem Details (`application/problem+json`) dla odpowiedzi `400 Bad Request` i `429 Too Many Requests` (spójny z formatem używanym już dla `401` i `403`). Format można włączyć przez nagłówek `X-Error-Format: problem-details`; dotychczasowe odpowiedzi `application/json` pozostają wspierane. 
+  - Dodano obsługę odpowiedzi `410 Gone` w formacie Problem Details (`application/problem+json`).
+  - W odpowiedziach `400` w formacie Problem Details zwracana jest lista `errors` (bez agregowania wielu błędów do jednej pozycji).
+  - Rozszerzono `ForbiddenProblemDetails` i `UnauthorizedProblemDetails` o właściwość `timestamp` ("Data i czas wystąpienia błędu w UTC.").
+  - Doprecyzowano ograniczenia dla właściwości `AllowedIps` w modelu żądania POST `/auth/ksef-token` - dodano atrybuty `minimum` i `maximum` (limit elementów list dla `ip4Addresses`, `ip4Ranges`, `ip4Masks`). Zmiana ma charakter dokumentacyjny: limity były egzekwowane również wcześniej, a ich przekroczenie skutkowało błędem walidacji.
+  - Drobne aktualizacje opisów i przykładów.
+
+- **Limity API**  
+  Zwiększono limity dla POST `/invoices/exports`, wyrównując je do wartości obowiązujących dla POST `/invoices/query/metadata`:
+    - req/s: z 4 do 8,
+    - req/min: z 8 do 16.
+
+### Wersja 2.3.0
+
+- **Wysyłka wniosku certyfikacyjnego (POST /certificates/enrollments)**  
+  Zwiększono limity dla identyfikatorów PESEL oraz fingerprint:  
+  - liczba wniosków o certyfikat KSeF: z 6 do 12,
+  - liczba aktywnych certyfikatów KSeF: z 2 do 6.  
+
+- **Wysyłka faktur**  
+  - Zaostrzono walidację wejściowego XML: prolog jest opcjonalny, jednak jeśli się pojawi i wskazuje inne kodowanie niż UTF-8, dokument zostanie odrzucony ([faktura powinna być zapisana w kodowaniu UTF-8](/faktury/weryfikacja-faktury.md)).
+  - Doprecyzowano wartość pola `Value` dla schemy `FA_RR (1) 1-1E`: zamiast `RR` należy przekazywać `FA_RR` (zgodnie z wartością `TKodFormularza` w XSD).
+
+- **Pobranie faktur**   
+  - Rozszerzono obsługę `formType` dla faktur `RR` o wartość `FA_RR` (spójnie z mechanizmem wysyłki faktur). Na środowisku TEST akceptowane są `RR` (do 30.03) oraz `FA_RR`, natomiast na PROD akceptowana będzie wyłącznie `FA_RR`.
+  - Umożliwiono wyszukiwanie faktur po ujemnych kwotach w filtrze `amount` - dopuszczono wartości ujemne w `amount.from` i `amount.to`.
+
+- **Eksport paczki faktur (POST `/invoices/exports`)**  
+  - Rozszerzono model żądania o właściwość boolean `onlyMetadata` (domyślnie: `false`):
+    - `onlyMetadata`=false - bez zmian: eksport zawiera faktury oraz plik `_metadata.json`,
+    - `onlyMetadata`=true - eksport zawiera wyłącznie plik `_metadata.json`, co umożliwia szybsze i lżejsze eksporty w scenariuszach wymagających jedynie metadanych.  
+
+- **OpenAPI**  
+  - Rozszerzono `ForbiddenProblemDetails.reasonCode` o wartość `context-type-not-allowed` ("Operacja nie jest dostępna dla uwierzytelnionego typu kontekstu").
+  - Poprawiono definicję `securitySchemes.Bearer` - ustawiono `scheme`: `bearer` (z małej litery), zgodnie ze specyfikacją.  
+  - Drobne aktualizacje opisów i przykładów.
+
+### Wersja 2.2.1
+
+- **Wysyłka faktur**  
+  Dodano nową wersję (`1-1E`) schemy `FA_RR (1)`.  
+  Schema `FA_RR (1) 1-0E` będzie obsługiwana na środowisku TEST do 23.04.
+  Schema `FA_RR (1) 1-1E` będzie obowiązywać na środowisku PROD od 01.04.  
+
+### Wersja 2.2.0
+
+- **Uprawnienia**  
+  Dodano nowy endpoint (POST `/permissions/query/entities/grants`) umożliwiający pobranie listy uprawnień do obsługi faktur w bieżącym kontekście (zwracane uprawnienia: `InvoiceWrite`, `InvoiceRead` - nadane przez inny podmiot).
+
+- **Uwierzytelnianie**  
+  Rozszerzono odpowiedź POST `/auth/challenge` o właściwość `clientIp`, zwracające adres IP klienta zarejestrowany przez KSeF. Wartość może zostać bezpośrednio wykorzystana do budowy `AuthorizationPolicy` w kolejnych krokach uwierzytelniania.
+
+- **OpenAPI**  
+  - Rozszerzono odpowiedzi `401 Unauthorized` i `403 Forbidden` o ustandaryzowany format błędu "Problem Details" (`application/problem+json`). Dodano schematy `UnauthorizedProblemDetails` oraz `ForbiddenProblemDetails`. `ForbiddenProblemDetails` udostępnia m.in. właściwość `reasonCode` oraz opcjonalny obiekt `security` na potrzeby dodatkowych informacji.
+  - Przywrócono (dotyczy tylko specyfikacji OpenAPI) `additionalProperties` dla pól słownikowych: `InvoiceStatusInfo.extensions` oraz `PartUploadRequest.headers`.
+  - Drobne aktualizacje opisów.
+
+- **Eksport paczki faktur (POST `/invoices/exports`).**  
+  Poprawiono generowanie pliku `_metadata.json` w paczce eksportu - przy dużej liczbie faktur plik mógł być wcześniej ucięty (nieprawidłowy JSON).
+
+### Wersja 2.1.2
+
+- **Wysyłka faktur**  
+  Dodano obsługę faktur RR ([schemat_RR(1)_v1-0E](/faktury/schemy/RR/schemat_RR(1)_v1-0E.xsd)).
+
+- **Wygenerowanie nowego tokena (POST `/tokens`)**  
+  W modelu żądania (`GenerateTokenRequest`) rozszerzono właściwość `permissions` (enum `TokenPermissionType`) o wartość `Introspection`, umożliwiając nadanie tego uprawnienia podczas generowania tokenu.
+
+- **Eksport paczki faktur (POST `/invoices/exports`). Pobranie listy metadanych faktur (POST `/invoices/query/metadata`)**   
+  Naprawiono interpretację parametrów `dateRange.from` / `dateRange.to` podawanych bez offsetu. Wartości bez strefy czasowej są teraz jednoznacznie interpretowane zgodnie z dokumentacją (czas lokalny Europe/Warsaw).
+
+- **OpenAPI**  
+  Usunięto `additionalProperties`: `false` w wybranych modelach. Zmiana porządkująca specyfikację i uelastyczniająca kontrakt - dopuszcza możliwość pojawiania się dodatkowych właściwości w żądaniach lub odpowiedziach (np. w ramach rozszerzeń). Dodanie nowej właściwości nie jest traktowane jako złamanie kontraktu; klienci API powinni ignorować nieznane właściwości.
+
+### Wersja 2.1.1
+
+- **Uwierzytelnianie**  
+  - **Pobranie statusu uwierzytelniania (GET `/auth/{referenceNumber}`)** oraz **Pobranie listy aktywnych sesji (GET `/auth/sessions`)**  
+  Uzupełniono definicję `authenticationMethodInfo` - oznaczono właściwości `category`, `code` oraz `displayName` jako `required` w modelu odpowiedzi.
+  - **Uwierzytelnienie z wykorzystaniem podpisu XAdES (POST `/auth/xades-signature`)**  
+  Dodano możliwość wcześniejszego włączenia nowych wymagań walidacji XAdES na środowiskach DEMO i PROD poprzez nagłówek: `X-KSeF-Feature`: `enforce-xades-compliance`.  
+
+### Wersja 2.1.0
+
+- **Uwierzytelnianie**  
+  - Dodano integrację z Węzłem Krajowym (login.gov.pl). Endpoint wykorzystywany do tej integracji nie jest publicznie dostępny (metoda uwierzytelnienia przeznaczona wyłącznie dla aplikacji rządowych).
+  - **Pobranie statusu uwierzytelniania (GET `/auth/{referenceNumber}`)** oraz **Pobranie listy aktywnych sesji (GET `/auth/sessions`)**  
+    - Oznaczono w modelu odpowiedzi właściwość `authenticationMethod` jako `deprecated`. Planowane wycofanie: `2026-11-16`. Aby zachować kompatybilność kontraktu w okresie przejściowym wartość `TrustedProfile` obejmuje zarówno "Profil Zaufany", jak i uwierzytelnienia realizowane przez Węzeł Krajowy.
+    - Dodano nową właściwość `authenticationMethodInfo` jako elastyczny opis metody uwierzytelniania: 
+      - `category` - kategoria metody uwierzytelnienia (enum: `XadesSignature`, `NationalNode`, `Token`, `Other`), 
+      - `code` - kod metody uwierzytelnienia (string), 
+      - `displayName` - nazwa metody uwierzytelnienia do wyświetlenia użytkownikowi (string).
+    - Rozszerzono możliwe wartości pola details dla statusu `460` ("Uwierzytelnianie zakończone niepowodzeniem z powodu błędu certyfikatu") o: "Certyfikat zawieszony".
+
+  - **Uwierzytelnienie z wykorzystaniem podpisu XAdES (POST `/auth/xades-signature`)**  
+    Ujednolicono i zaostrzono walidację [podpisu XAdES](/auth/podpis-xades.md) w procesie uwierzytelniania, tak aby akceptowane były wyłącznie podpisy zgodne z wymaganiami profili XAdES.  
+    Nowe wymagania obowiązują już na środowisku TEST. Na środowiskach DEMO i PROD zaczną obowiązywać **16 marca 2026** (zalecamy weryfikację integracji na TEST przed tą datą).
+
+- **Dane testowe**  
+  Dodano nowe endpointy:
+    - POST `/testdata/context/block` - "Blokuje możliwość uwierzytelniania dla wskazanego kontekstu. Uwierzytelnianie zakończy się błędem 480.",
+    - POST `/testdata/context/unblock` - odblokowuje możliwość uwierzytelniania dla bieżącego kontekstu.  
+
+- **OpenAPI**  
+  Drobne aktualizacje opisów.
+
+### Wersja 2.0.1
+
+- **Uprawnienia**
+  - Pobranie listy własnych uprawnień (POST `/permissions/query/personal/grants`).  
+    - Poprawiono logikę zwracania listy "Moje uprawnienia" dla właściciela kontekstu - w wynikach zwracane są również uprawnienia podmiotowe do wystawiania i przeglądania faktur (`InvoiceWrite`, `InvoiceRead`) nadane **bez prawa** do dalszego przekazywania `canDelegate = false`. Wcześniej lista zwracała tylko te z prawem do dalszego przekazywania.
+    - Dodano opis dla wartości `InternalId` w `PersonalPermissionsContextIdentifierType`; 
+    - Zaktualizowano ograniczenia długości `PersonalPermissionsContextIdentifier.value` (`maxLength` z 10 na 16).
+  - Poprawiono przykłady w dokumentacji OpenAPI dla endpointów uprawnień.
+
+- **Pobieranie faktur**  
+  Doprecyzowano walidację `dateRange` w `InvoiceQueryFilters`: zakres 3 miesięcy uznawany jest za poprawny, jeśli mieści się w trzech miesiącach w UTC lub w czasie polskim.
+
+- **Wysyłka faktur**
+  - Walidacja numeru NIP  
+    Dodano weryfikację sumy kontrolnej NIP dla: `Podmiot1`, `Podmiot2`, `Podmiot3` oraz `PodmiotUpowazniony` (jeśli występuje) - dotyczy tylko środowiska produkcyjnego.
+  - Walidacja NIP w identyfikatorze wewnętrznym  
+    Dodano weryfikację sumy kontrolnej NIP w `InternalId` dla `Podmiot3` (jeśli identyfikator występuje) - dotyczy tylko środowiska produkcyjnego.
+  - Aktualizacja [dokumentacji](/faktury/weryfikacja-faktury.md).
+
+- **OpenAPI**  
+  Drobne aktualizacje opisów.
+
+### Wersja 2.0.0
+
+- **UPO**  
+  Zgodnie z zapowiedzią z RC6.0, od `2025-12-22` domyślnie zwracana jest wersja UPO v4-3.
+
+- **Status sesji** (GET `/sessions/{referenceNumber}`)  
+  - Rozszerzono model odpowiedzi o właściwości `dateCreated` ("Data utworzenia sesji") oraz `dateUpdated` ("Data ostatniej aktywności w ramach sesji").  
+
+- **Zamknięcie sesji wsadowej (POST `/sessions/batch/{referenceNumber}/close`)**   
+  - Dodano kod błędu `21208` ("Czas oczekiwania na requesty upload lub finish został przekroczony").
+
+- **Pobranie faktury/UPO**
+  - Dodano nagłówek `x-ms-meta-hash` (skrót `SHA-256`, `Base64`) w odpowiedziach `200` dla endpointów:
+    - GET `/invoices/ksef/{ksefNumber}`,
+    - GET `/sessions/{referenceNumber}/invoices/ksef/{ksefNumber}/upo`,
+    - GET `/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}/upo`,
+    - GET `/sessions/{referenceNumber}/upo/{upoReferenceNumber}`.
+
+- **Pobranie statusu uwierzytelniania** (GET `/auth/{referenceNumber}`)
+  - Uzupełniono dokumentację HTTP 400 (Bad Request) o kod błędu `21304` ("Brak uwierzytelnienia") - operacja uwierzytelniania o numerze referencyjnym {`referenceNumber`} nie została znaleziona.
+  - Rozszerzono status `450` ("Uwierzytelnianie zakończone niepowodzeniem z powodu błędnego tokenu") o dodatkową przyczynę: "Nieprawidłowe wyzwanie autoryzacyjne".
+
+- **Pobranie tokenów dostępowych** (POST `/auth/token/redeem`)  
+  Uzupełniono dokumentację HTTP 400 (Bad Request) o kody błędów:
+    - `21301` - "Brak autoryzacji":
+      - Tokeny dla operacji {`referenceNumber`} zostały już pobrane,
+      - Status uwierzytelniania ({`operation.Status`}) nie pozwala na pobranie tokenów,
+      - Token KSeF został unieważniony.
+    - `21304` - "Brak uwierzytelnienia" - Operacja uwierzytelniania {`referenceNumber`} nie została znaleziona, 
+    - `21308` - "Próba wykorzystania metod autoryzacyjnych osoby zmarłej".
+
+- **Odświeżenie tokena dostępowego** (POST `/auth/token/refresh`)  
+  Uzupełniono dokumentację HTTP 400 (Bad Request) o kody błędów:
+    - `21301` - "Brak autoryzacji":
+      - Status uwierzytelniania ({`operation.Status`}) nie pozwala na pobranie tokenów,
+      - Token KSeF został unieważniony.
+    - `21304` - "Brak uwierzytelnienia" - Operacja uwierzytelniania {`referenceNumber`} nie została znaleziona, 
+    - `21308` - "Próba wykorzystania metod autoryzacyjnych osoby zmarłej".
+
+- **Wysyłka interaktywna** (POST `/sessions/online/{referenceNumber}/invoices`)  
+  Uzupełniono dokumentację kodów błędów o:
+    - `21402` "Nieprawidłowy rozmiar pliku" - długość treści nie zgadza się z rozmiarem pliku, 
+    - `21403` „Nieprawidłowy skrót pliku" - skrót treści nie zgadza się ze skrótem pliku.
+
+- **Eksport paczki faktur (POST `/invoices/exports`). Pobranie listy metadanych faktur (POST `/invoices/query/metadata`)**  
+  Zmniejszono maksymalny dozwolony zakres `dateRange` z 2 lat do 3 miesięcy.
+
+- **Uprawnienia**  
+  - Dodano atrybut `required` dla właściwości `subjectDetails` ("Dane podmiotu, któremu nadawane są uprawnienia") we wszystkich endpointach nadających uprawnienia (`/permissions/.../grants).
+  - Dodano atrybut `required` dla właściwości `euEntityDetails` ("Dane podmiotu unijnego, w kontekście którego nadawane są uprawnienia") w endpoint POST `/permissions/eu-entities/administration/grants` ("Nadanie uprawnień administratora podmiotu unijnego").  
+  - Dodano wartość `PersonByFingerprintWithIdentifier` ("Osoba fizyczna posługująca się certyfikatem niezawierającym identyfikatora NIP ani PESEL, ale mająca NIP lub PESEL") do enum `EuEntityPermissionSubjectDetailsType` w enpoint POST `/permissions/eu-entities/administration/grants` ("Nadanie uprawnień administratora podmiotu unijnego").    
+  - Zmieniono typ właściwości `subjectEntityDetails` na `PermissionsSubjectEntityByIdentifierDetails` ("Dane podmiotu uprawnionego") w modelu odpowiedzi w POST `/permissions/query/authorizations/grants` ("Pobranie listy uprawnień podmiotowych do obsługi faktur").  
+  - Zmieniono typ właściwości `subjectEntityDetails` na `PermissionsSubjectEntityByFingerprintDetails` ("Dane podmiotu uprawnionego") w modelu odpowiedzi w POST `/permissions/query/eu-entities/grants` ("Pobranie listy uprawnień administratorów lub reprezentantów podmiotów unijnych uprawnionych do samofakturowania").  
+  - Zmieniono typ właściwości `subjectPersonDetails` na `PermissionsSubjectPersonByFingerprintDetails` ("Dane osoby uprawnionej") w modelu odpowiedzi w POST `/permissions/query/eu-entities/grants` ("Pobranie listy uprawnień administratorów lub reprezentantów podmiotów unijnych uprawnionych do samofakturowania").    
+  - Wprowadzono walidację sumy kontrolnej dla identyfikatora `InternalId` w POST `/permissions/subunits/grants` ("Nadanie uprawnień administratora podmiotu podrzędnego").
+  - Doprecyzowano opisy właściwości.
+
+- **OpenAPI**  
+  - Uzupełniono dokumentację odpowiedzi `429` o zwracany nagłówek `Retry-After` oraz treść odpowiedzi `TooManyRequestsResponse`.
+  - Doprecyzowano opisy właściwości typu `byte` - wartości są przekazywane jako dane binarne zakodowane w formacie `Base64`.
+  - Poprawiono literówki w specyfikacji.
+
+### Wersja 2.0.0 RC6.1
+
+- **Nowa adresacja środowisk**  
+  Udostępnienie nowych adresów. Zmiany w sekcji [środowiska KSeF API 2.0](srodowiska.md).
+
+- **Uwierzytelnianie - pobranie statusu (GET `/auth/{referenceNumber}`)**  
+  Dodano kod `480` - Uwierzytelnienie zablokowane: "Podejrzenie incydentu bezpieczeństwa. Skontaktuj się z Ministerstwem Finansów przez formularz zgłoszeniowy."
+
+- **Uprawnienia**  
+  - Rozszerzono reguły dostępu dla operacji sesji (GET/POST `/sessions/...`): do listy akceptowanych uprawnień dodano `EnforcementOperations` (organ egzekucyjny).
+  - Dodano ograniczenia długości dla właściwości typu string: `minLength` oraz `maxLength`.
+  - Dodano `id` (`Asc`) jako drugi klucz sortowania w metadanych `x-sort` dla zapytań wyszukujących uprawnienia. Domyślna kolejność: `dateCreated` (`Desc`), następnie `id` (`Asc`) - zmiana porządkowa zwiększająca deterministyczność paginacji.
+  - Dodano walidację właściwości `IdDocument.country` w endpoint POST `/permissions/persons/grants` ("Nadanie osobom fizycznym uprawnień do pracy w KSeF") - wymagana zgodność z **ISO 3166-1 alpha-2** (np. `PL`, `DE`, `US`).
+  - "Pobranie listy uprawnień administratorów lub reprezentantów podmiotów unijnych uprawnionych do samofakturowania" (POST `/permissions/query/eu-entities/grants`):
+    - usunięto walidację pattern (regex) oraz doprecyzowano opis właściwości `EuEntityPermissionsQueryRequest.authorizedFingerprintIdentifier`.
+    - doprecyzowano opis właściwości `EuEntityPermissionsQueryRequest.vatUeIdentifier`.
+
+- **Sesja interaktywnej**  
+  Dodano nowe kody błędów dla POST `/sessions/online/{referenceNumber}/invoices` ("Wysłanie faktury"):
+    - `21166` - Korekta techniczna niedostępna.
+    - `21167` - Status faktury nie pozwala na korektę techniczną.
+
+- **Limity API**  
+  - Zwiększono limit godzinowy dla grupy `invoiceStatus` (pobranie statusu faktury z sesji) z 720 na 1200 req/h: 
+    - GET /sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}.
+  - Zwiększono limit godzinowy dla grupy `sessionMisc` (zasoby GET `/sessions/*`) z 720 do 1200 req/h:
+    - GET `/sessions/{referenceNumber}`, 
+    - GET `/sessions/{referenceNumber}/invoices/ksef/{ksefNumber}/upo`,
+    - GET `/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}/upo`,
+    - GET `/sessions/{referenceNumber}/upo/{upoReferenceNumber}`.
+  - Zmniejszono limit godzinowy dla grupy `batchSession` (otwarcie/zamknięcie sesji wsadowej) z 120 na 60 req/h: 
+    - POST `/sessions/batch`, 
+    - POST `/sessions/batch/{referenceNumber}/close`.
+  - Zwiększono limity dla endpointu `/invoices/exports/{referenceNumber}` ("Pobranie statusu eksportu paczki faktur") poprzez dodanie nowej grupy `invoiceExportStatus` o parametrach: 10 req/s, 60 req/min, 600 req/h. 
+
+- **Otwarcie sesji wsadowej (POST `/sessions/batch`)**  
+  Usunięto z modelu `BatchFilePartInfo` właściwość `fileName` (wcześniej oznaczoną jako deprecated; x-removal-date: 2025-12-07).  
+
+- **Inicjalizacja uwierzytelnienia (POST `/auth/challenge`)**  
+  Dodano właściwość `timestampMs` (int64) w modelu odpowiedzi - czas wygenerowania challenge w milisekundach od 1.01.1970 (Unix).
+
+- **Dane testowe**
+  - Doprecyzowano typ właściwości `expectedEndDate`: format: `date` w (POST `/testdata/attachment/revoke`).
+  - Usunięto wartość `Token` z enum `SubjectIdentifierType` w endpoint POST `/testdata/limits/subject/certificate`. Wartość była nieużywana: w KSeF podmiot nie może być "tokenem" - tożsamość zawsze wynika z `NIP/PESEL` lub odcisku palca certyfikatu, który przenosi tożsamość podmiotu, który go utworzył.
+
+- **OpenAPI**  
+  Zwiększono maksymalną wartość `pageSize` z 500 do 1000 dla endpointów:
+  - GET `/sessions`
+  - GET `/sessions/{referenceNumber}/invoices`
+  - GET `/sessions/{referenceNumber}/invoices/failed`
+
+### Wersja 2.0.0 RC6.0
+
+- **Limity API**  
+  - Na środowisku **TE** (testowe) włączono i zdefiniowano politykę [limitów api](limity/limity-api.md) z wartościami 10x wyższymi niż na **PROD**; szczegóły: ["Limity na środowiskach"](/limity/limity-api.md#limity-na-środowiskach).
+  - Na środowisku **TR** (DEMO) włączono [limity api](limity/limity-api.md) z wartościami identycznymi jak na **PROD**. Wartości są replikowane z produkcji; szczegóły: ["Limity na środowiskach"](/limity/limity-api.md#limity-na-środowiskach).
+  - Dodano endpoint POST `/testdata/rate-limits/production` - ustawia w bieżącym kontekście wartości limitów api zgodne z profilem produkcyjnym. Dostępny tylko na środowisku **TE**.
+  
+- **Eksport paczki faktur (POST `/invoices/exports`). Pobranie listy metadanych faktur (POST `/invoices/query/metadata`)**   
+  - Dodano dokument [High Water Mark (HWM)](pobieranie-faktur/hwm.md) opisujący mechanizm zarządzania kompletnością danych w czasie.
+  - Zaktualizowano [Przyrostowe pobieranie faktur](pobieranie-faktur/przyrostowe-pobieranie-faktur.md) o zalecenia wykorzystania mechanizmu `HWM`.
+  - Rozszerzono model odpowiedzi o właściwość `permanentStorageHwmDate` (string, date-time, nullable). Dotyczy wyłącznie zapytań z `dateType = PermanentStorage` i oznacza punkt, poniżej którego dane są kompletne; dla `dateType = Issue/Invoicing` - null.  
+  - Dodano właściwość `restrictToPermanentStorageHwmDate` (boolean, nullable) w obiekcie `dateRange`, który włącza mechanizm High Water Mark (`HWM`) i ogranicza zakres dat do bieżącej wartości `HWM`. Dotyczy wyłącznie zapytań z `dateType = PermanentStorage`. Zastosowanie parametru znacząco redukuje duplikaty między kolejnymi eksportami i zapewnia spójność podczas długotrwałej synchronizacji przyrostowej.
+
+- **UPO - aktualizacja XSD do v4-3**
+  - Zmieniono wzorzec (`pattern`) elementu `NumerKSeFDokumentu`, aby dopuszczał także numery KSeF generowane dla faktur z KSeF 1.0 (36 znaków).
+  - Dodano element `TrybWysylki` - tryb przesłania dokumentu do KSeF: `Online` lub `Offline`.
+  - Zmieniono wartość `NazwaStrukturyLogicznej` na format : Schemat_{systemCode}_v{schemaVersion}.xsd (np. Schemat_FA(3)_v1-0E.xsd).
+  - Zmieniono wartość `NazwaPodmiotuPrzyjmujacego` na środowiskach testowych poprzez dodanie sufiksu z nazwą środowiska:
+    - `TE`: Ministerstwo Finansów - środowisko testowe (TE),
+    - `TR`: Ministerstwo Finansów - środowisko przedprodukcyjne (TR).
+    
+    `PROD`: bez zmian - Ministerstwo Finansów.  
+  - Obecnie domyślnie zwracane jest UPO v4-2. Aby otrzymać UPO v4-3, należy dodać nagłówek: `X-KSeF-Feature: upo-v4-3` przy otwieraniu sesji (online/wsadowej).
+  - Od `2025-12-22` domyślną wersją będzie UPO v4-3.
+  - XSD UPO v4-3: [schema](/faktury/upo/schemy/upo-v4-3.xsd).
+
+- **Status sesji** (GET `/sessions/{referenceNumber}`)  
+    Doprecyzowano opis kodu `440` - Sesja anulowana: możliwe przyczyny to "Przekroczono czas wysyłki" lub "Nie przesłano faktur".    
+
+- **Status faktury** (GET `/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}`)  
+    Dodano typ `InvoiceStatusInfo` (rozszerza `StatusInfo`) o pole `extensions` - obiekt z ustrukturyzowanymi szczegółami statusu. Pole `details` pozostaje bez zmian. Przykład (duplikat faktury):
+    
+    ```json
+    "status": {
+      "code": 440,
+      "description": "Duplikat faktury",
+      "details": [
+        "Duplikat faktury. Faktura o numerze KSeF: 5265877635-20250626-010080DD2B5E-26 została już prawidłowo przesłana do systemu w sesji: 20250626-SO-2F14610000-242991F8C9-B4"
+      ],
+      "extensions": {
+        "originalSessionReferenceNumber": "20250626-SO-2F14610000-242991F8C9-B4",
+        "originalKsefNumber": "5265877635-20250626-010080DD2B5E-26"
+      }
+    }    
+    ```
+
+- **Uprawnienia**  
+    Dodano właściwość `subjectDetails` - "Dane podmiotu, któremu nadawane są uprawnienia" do wszystkich endpointów nadających uprawnienia (/permissions/.../grants). W RC6.0 pole jest opcjonalne; od 2025-12-19 będzie wymagane.  
+
+- **Wyszukiwanie nadanych uprawnień** (POST `/permissions/query/authorizations/grants`)  
+    Rozszerzono reguły dostępu o `PefInvoiceWrite`.
+
+- **Dane testowe - załączniki (POST /testdata/attachment/revoke)**  
+  Rozszerzono model żądania `AttachmentPermissionRevokeRequest` o pole `expectedEndDate` (opcjonalne) - data wycofania zgody na przesyłanie faktur z załącznikiem.    
+
+- **OpenAPI**  
+  - Dodano odpowiedź HTTP `429` - "Too Many Requests" do wszystkich endpointów. We właściwości `description` tej odpowiedzi publikowana jest tabelaryczna prezentacja limitów (`req/s`, `req/min`, `req/h`) oraz nazwy grupy limitowej przypisanej do endpointu. Mechanizm i semantyka `429` pozostają zgodne z opisem w dokumentacji [limitów](/limity/limity-api.md).
+  - Do każdego endpointu dodano metadane `x-rate-limits` z wartościami limitów (`req/s`, `req/min`, `req/h`).
+  - Usunięto jawne właściwości `exclusiveMaximum`: `false` i `exclusiveMinimum`: `false` z definicji liczbowych (pozostawiono tylko minimum/maximum). Zmiana porządkująca – bez wpływu na walidację (w OpenAPI domyślne wartości tych właściwości to `false`).
+  - Dodano ograniczenia długości dla właściwości typu string: `minLength`.
+  - Usunięto jawne ustawienia `style`: `form` dla parametrów w in: query.
+  - Zmieniono kolejność wartości enuma `BuyerIdentifierType` (obecnie: `None`, `Other`, `Nip`, `VatUe`). Zmiana porządkowa - bez wpływu na działanie.
+  - Poprawiono literówkę w opisie właściwości `KsefNumber`.
+  - Doprecyzowano format właściwości `PublicKeyCertificate` reprezentującej dane binarne kodowane `Base64`, ustawiono format: `byte`.
+  - Wprowadzono drobne korekty językowe i interpunkcyjne w polach `description`.
+
+### Wersja 2.0.0 RC5.7
+
+- **Otwarcie sesji wsadowej (POST `/sessions/batch`)**  
+  Oznaczono w modelu żądania `BatchFilePartInfo.fileName` jako `deprecated` (planowane usunięcie: 2025-12-05).
+
+- **Statusy operacji asynchronicznych**  
+  Dodano status `550` - "Operacja została anulowana przez system". Opis: "Przetwarzanie zostało przerwane z przyczyn wewnętrznych systemu. Spróbuj ponownie."
+
+- **OpenAPI**  
+  - Dodano ograniczenia liczby elementów w tablicy: `minItems`, `maxItems`.
+  - Dodano ograniczenia długości dla właściwości typu string: `minLength` oraz `maxLength`.  
+  - Zaktualizowano opisy właściwości (`invoiceMetadataAuthorizedSubject.role`, `invoiceMetadataBuyer`, `invoiceMetadataThirdSubject.role`, `buyerIdentifier`).
+  - Zaktualizowano regex patterny dla `vatUeIdentifier`, `authorizedFingerprintIdentifier`, `internalId`, `nipVatUe`, `peppolId`.
+
+### Wersja 2.0.0 RC5.6
+
+- **Pobranie statusu sesji (GET `/sessions/{referenceNumber}`)**  
+  Dodano w odpowiedzi pole `UpoPageResponse.downloadUrlExpirationDate` - data i godzina wygaśnięcia adresu pobrania UPO; po tym momencie `downloadUrl` nie jest już aktywny.
+
+- **Pobranie listy metadanych certyfikatów (POST `/certificates/query`)**  
+  Rozszerzono odpowiedź (`CertificateListItem`) o właściwość `requestDate` - data złożenia wniosku certyfikacyjnego.  
+
+- **Pobranie listy dostawców usług Peppol (GET `/peppol/query`)**  
+  - Rozszerzono model odpowiedzi o pole `dateCreated` - data rejestracji dostawcy usług Peppol w systemie.
+  - Oznaczono właściwość `dateCreated`, `id`, `name` w modelu odpowiedzi jako zawsze zwracaną.
+  - Zdefiniowano schemat `PeppolI` (string, 9 znaków) i zastosowano w `PeppolProvider`.
+
+- **OpenAPI**  
+  - Dodano metadane `x-sort` do wszystkich endpointów zwracających listy. W opisach endpointów dodano sekcję Sortowanie z domyślnym porządkiem (np. "requestDate (Desc)").
+  - Dodano ograniczenia długości dla właściwości typu string: `minLength` oraz `maxLength`.
+  - Doprecyzowano format właściwości reprezentujących dane binarne kodowane `Base64`: ustawiono format: `byte` (`encryptedInvoiceContent`, `encryptedSymmetricKey`, `initializationVector`, `encryptedToken`).
+  - Zdefiniowano wspólny schemat `Sha256HashBase64` i zastosowano go do wszystkich właściwości reprezentujących skrót `SHA-256` w `Base64` (m.in. `invoiceHash`).
+  - Zdefiniowano wspólny schemat `ReferenceNumber` (string, długość 36) i zastosowano go do wszystkich parametrów i właściwości reprezentujących numer referencyjny operacji asynchronicznej (w ścieżkach, zapytaniach i odpowiedziach).
+  - Zdefiniowano wspólny schemat `Nip` (string, 10 znaków, regex pattern) i zastosowano go do wszystkich właściwości reprezentujących NIP.
+  - Zdefiniowano schemat `Pesel` (string, 11 znaków, regex pattern) i zastosowano go we właściwości reprezentującej PESEL.
+  - Zdefiniowano wspólny schemat `KsefNumber` (string, 35-36 znaków, regex pattern) i zastosowano go do wszystkich właściwości reprezentujących numer KSeF.  
+  - Zdefiniowano schemat `Challenge` (string, 36 znaków) i zastosowano w `AuthenticationChallengeResponse`.`challenge`.
+  - Zdefiniowano wspólny schemat `PermissionId` (string, 36 znaków) i zastosowano go we wszystkich miejscach: w parametrach oraz we właściwościach odpowiedzi.
+  - Dodano wyrażenia regularne dla wybranych pól tekstowych.
+
+### Wersja 2.0.0 RC5.5
+
+- **Pobranie aktualnych limitów API (GET `/api/v2/rate-limits`)**  
+  Dodano endpoint zwracający efektywne limity wywołań API w układzie `perSecond`/`perMinute`/`perHour` dla poszczególnych obszarów (m.in. `onlineSession`, `batchSession`, `invoiceSend`, `invoiceStatus`, `invoiceExport`, `invoiceDownload`, `other`).
+
+- **Status faktury w sesji**  
+  Rozszerzono odpowiedź dla GET `/sessions/{referenceNumber}/invoices` ("Pobranie faktur sesji") oraz GET `/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}` ("Pobranie statusu faktury z sesji") o właściwości: `upoDownloadUrlExpirationDate` - "data i godzina wygaśnięcia adresu. Po tej dacie link `UpoDownloadUrl` nie będzie już aktywny". Rozszerzono opis `upoDownloadUrl`.
+
+- **Usunięcie pól \*InMib (zmiana zgodna z zapowiedzią z 5.3)**  
+  Usunięto właściwości `maxInvoiceSizeInMib` oraz `maxInvoiceWithAttachmentSizeInMib`.
+  Zmiana dotyczy:
+    - GET `/limits/context` – odpowiedzi (`onlineSession`, `batchSession`),
+    - POST `/testdata/limits/context/session` – modelu żądania (`onlineSession`, `batchSession`),
+    - Modeli: `BatchSessionContextLimitsOverride`, `BatchSessionEffectiveContextLimits`, `OnlineSessionContextLimitsOverride`, `OnlineSessionEffectiveContextLimits`.
+  Do wskazywania rozmiarów używane są wyłącznie pola *InMB (1 MB = 1 000 000 B).
+
+- **Usunięcie `operationReferenceNumber` (zmiana zgodna z zapowiedzią z 5.3)**  
+  Usunięto właściwość `operationReferenceNumber` z modelu odpowiedzi; jedyną obowiązującą nazwą jest `referenceNumber`. Zmiana obejmuje:
+  - GET `/invoices/exports/{referenceNumber}` - "Status eksportu paczki faktur",
+  - POST `/permissions/operations/{referenceNumber}` - "Pobranie statusu operacji uprawnień".
+
+- **Eksport paczki faktur (POST `/invoices/exports`)**  
+  - Dodano nowy kod błędu: `21182` - "Osiągnięto limit trwających eksportów. Dla uwierzytelnionego podmiotu w bieżącym kontekście osiągnięto maksymalny limit {count} równoczesnych eksportów faktur. Spróbuj ponownie później".
+  - Rozszerzono modelu odpowiedzi o właściwość `packageExpirationDate` wskazującą datę wygaśnięcia przygotowanej paczki. Po upływie tej daty paczka nie będzie dostępna do pobrania.
+  - Dodano kod błędu `210` - "Eksport faktur wygasł i nie jest już dostępny do pobrania".
+
+- **Status eksportu paczki faktur (GET `/invoices/exports/{referenceNumber}`)**  
+  Doprecyzowano opisy pól linków do pobrania części paczki:
+  - `url` - "Adres URL, pod który należy wysłać żądanie pobrania części paczki. Link jest generowany dynamicznie w momencie odpytania o status operacji eksportu. Nie podlega limitom API i nie wymaga przesyłania tokenu dostępowego przy pobraniu".
+  - `expirationDate` - "Data i godzina wygaśnięcia linku umożliwiającego pobranie części paczki.Po upływie tego momentu link przestaje być aktywny".
+
+- **Autoryzacja**
+  - Rozszerzono reguły dostępu o `SubunitManage` dla POST `/permissions/query/persons/grants`: operację można wykonać, jeżeli podmiot posiada `CredentialsManage`, `CredentialsRead`, `SubunitManage`.
+  - Nadanie uprawnień w sposób pośredni (POST `/permissions/indirect/grants`)
+    Zaktualizowano opis właściwości `targetIdentifier.description`: doprecyzowano, że brak identyfikatora kontekstu oznacza nadanie uprawnienia pośredniego typu generalnego.
+
+- **OpenAPI**  
+  Zwiększono maksymalną wartość `pageSize` z 100 do 500 dla endpointów:
+  - GET `/sessions`
+  - GET `/sessions/{referenceNumber}/invoices`
+  - GET `/sessions/{referenceNumber}/invoices/failed`
+
+### Wersja 2.0.0 RC5.4
+
+- **Pobranie listy metadanych faktur (POST /invoices/query/metadata)**  
+  - Dodano parametr `sortOrder`, umożliwiający określenie kierunku sortowania wyników.
+
+- **Status sesji**  
+  Usunięto błąd uniemożliwiający uzupełnianie tej właściwości w odpowiedziach API dotyczących faktur (pole nie było wcześniej zwracane). Wartość jest uzupełniana asynchronicznie w momencie trwałego zapisu i może być tymczasowo null.
+
+- **Dane testowe (tylko na środowiskach testowych)**
+  - Zmiana limitów API dla bieżącego kontekstu (POST `testdata/rate-limits`)  
+  Dodano endpoint umożliwiający tymczasowe nadpisanie efektywnych limitów API dla bieżącego kontekstu. Zmiana przygotowuje uruchomienie symulatora limitów na środowisku TE.
+  - Przywrócenie domyślnych limitów (DELETE `/testdata/rate-limits`)
+  Dodano endpoint przywracający domyślne wartości limitów dla bieżącego kontekstu.
+
+- **OpenAPI**  
+  - Doprecyzowano definicje parametrów tablicowych w query; zastosowano `style: form`. Wiele wartości należy przekazywać przez powtórzenie parametru, np. `?statuses=InProgress&statuses=Succeeded`. Zmiana dokumentacyjna, bez wpływu na działanie API.
+  - Zaktualizowano opisy właściwości (`partUploadRequests`, `encryptedSymmetricKey`, `initializationVector`).
+
+### Wersja 2.0.0 RC5.3
+
+- **Eksport paczki faktur (POST `/invoices/exports`)**  
+  Dodano możliwość dołączenia pliku `_metadata.json` do paczki eksportu. Plik ma postać obiektu JSON z tablicą `invoices`, zawierającą obiekty `InvoiceMetadata` (model zwracany przez POST `/invoices/query/metadata`).
+  Włączenie (preview): do nagłówka żądania należy dodać `X-KSeF-Feature`: `include-metadata`.
+  Od 2025-10-27 zmienia się domyślne zachowanie endpointu - paczka eksportu będzie zawsze zawierać plik `_metadata.json` (nagłówek nie będzie wymagany).
+
+- **Status faktury**  
+  - W przypadku przetworzenia z błędem, gdy możliwe było odczytanie numeru faktury (np. kod błędu `440` - duplikat faktury), odpowiedź zawiera właściwość `invoiceNumber` z odczytanym numerem.
+  - Oznaczono właściwość `invoiceHash`, `referenceNumber` w modelu odpowiedzi jako zawsze zwracaną.
+
+- **Standaryzacja jednostek rozmiaru (MB, SI)**  
+  Ujednolicono zapis limitów w dokumentacji i API: wartości prezentowane w MB (SI), gdzie 1 MB = 1 000 000 B.
+
+- **Pobranie limitów dla bieżącego kontekstu (GET `/limits/context`)**  
+  Dodano w modelu odpowiedzi `maxInvoiceSizeInMB`, `maxInvoiceWithAttachmentSizeInMB` dla właściwości `onlineSession` i `batchSession`.
+  Właściwości `maxInvoiceSizeInMib`, `maxInvoiceWithAttachmentSizeInMib` oznaczono jako deprecated (planowane usunięcie: 2025-10-27).
+
+- **Zmiana limitów sesji dla bieżącego kontekstu (POST `/testdata/limits/context/session`)**  
+  Dodano w modelu żądania `maxInvoiceSizeInMB`, `maxInvoiceWithAttachmentSizeInMB` dla właściwości `onlineSession` i `batchSession`.
+  Właściwości `maxInvoiceSizeInMib`, `maxInvoiceWithAttachmentSizeInMib` oznaczono jako deprecated (planowane usunięcie: 2025-10-27).
+
+- **Status eksportu paczki faktur (GET `/invoices/exports/{referenceNumber}`)**  
+  Zmiana nazwy parametru ścieżki z `operationReferenceNumber` na `referenceNumber`.  
+  Zmiana nie wpływa na kontrakt HTTP (ścieżka i znaczenie wartości bez zmian) ani na zachowanie endpointu.
+
+- **Uprawnienia**  
+  - Zaktualizowano opisy endpointów przykłady endpointów z obszaru permissions/*. Zmiana dotyczy wyłącznie dokumentacji (doprecyzowanie opisów, formatów i przykładów); brak zmian w zachowaniu API oraz kontrakcie.
+  - Zmiana nazwy parametru ścieżki z `operationReferenceNumber` na `referenceNumber` w "Pobranie statusu operacji" (POST `/permissions/operations/{referenceNumber}`).  
+  Zmiana nie wpływa na kontrakt HTTP (ścieżka i znaczenie wartości bez zmian) ani na zachowanie endpointu.
+  - "Nadanie uprawnień w sposób pośredni" (POST `permissions/indirect/grants`)  
+    Dodano obsługę identyfikatora wewnętrznego - rozszerzono właściwość `targetIdentifier` o wartość `InternalId`.
+  - "Pobranie listy własnych uprawnień" (POST `/permissions/query/personal/grants`)  
+      - Rozszerzono w modelu żądania właściwość `targetIdentifier` o wartość `InternalId` (możliwość wskazania identyfikatora wewnętrznego).
+      - Usunięto w modelu odpowiedzi wartość `PersonalPermissionScope.Owner`. Uprawnienia właścicielskie (nadawane przez ZAW-FA lub powiązanie NIP/PESEL) nie są zwracane.
+
+- **Status uwierzytelniania (GET `/auth/{referenceNumber}`)**  
+  Rozszerzono tabelę kodów błędów o `470` - "Uwierzytelnianie zakończone niepowodzeniem" z doprecyzowaniem: "Próba wykorzystania metod autoryzacyjnych osoby zmarłej".
+
+- **Obsługa faktur PEF**  
+  Zmieniono wartości enuma (`FormCode`):
+    - `FA_PEF (3)` na `PEF (3)`,
+    - `FA_KOR_PEF (3)` na `PEF_KOR (3)`.
+
+- **Wygenerowanie nowego tokena (POST `/tokens`)**  
+  - W modelu żądania (`GenerateTokenRequest`) oznaczono pola `description` i `permissions` jako wymagane.
+  - W modelu odpowiedzi (`GenerateTokenResponse`) oznaczono pola `referenceNumber` i `token` jako zawsze zwracane.
+
+- **Statusu tokena KSeF (GET /tokens/{referenceNumber})**
+  - Oznaczono właściwość `authorIdentifier`, `contextIdentifier`, `dateCreated`, `description`, `referenceNumber`, `requestedPermissions`, `status` w modelu odpowiedzi jako zawsze zwracaną.
+
+- **Pobranie listy wygenerowanych tokenów (GET /tokens)**
+  - Oznaczono właściwość `authorIdentifier`, `contextIdentifier`, `dateCreated`, `description`, `referenceNumber`, `requestedPermissions`, `status` w modelu odpowiedzi jako zawsze zwracaną.
+
+- **Dane testowe - utworzenie osoby fizycznej (POST `/testdata/person`)**  
+  Rozszerzono żądanie o właściwość `isDeceased` (boolean) umożliwiając utworzenie testowej osoby zmarłej (np. do scenariuszy weryfikujących kod statusu `470`).
+
+- **OpenAPI**
+  - Doprecyzowano ograniczenia dla właściwości typu integer w requests poprzez dodanie atrybutów `minimum` / `exclusiveMinimum`, `maximum` / `exclusiveMaximum`.  
+  - Rozszerzono odpowiedź o pole `referenceNumber` (zawiera tę samą wartość, co dotychczasowe `operationReferenceNumber`). Oznaczono `operationReferenceNumber` jako `deprecated` i zostanie usunięte z odpowiedzi 2025-10-27; należy przejść na `referenceNumber`. Charakter zmiany: przejściowy rename z zachowaniem kompatybilności (obie właściwości zwracane równolegle do daty usunięcia).  
+  Dotyczy endpointów:
+    - POST `/permissions/persons/grants`,
+    - POST `/permissions/entities/grants`,
+    - POST `/permissions/authorizations/grants`,
+    - POST `/permissions/indirect/grants`,
+    - POST `/permissions/subunits/grants`,
+    - POST `/permissions/eu-entities/administration/grants`,
+    - POST `/permissions/eu-entities/grants`,
+    - DELETE `/permissions/common/grants/{permissionId}`,
+    - DELETE `/permissions/authorizations/grants/{permissionId}`,
+    - POST `/invoices/exports`.
+  - Usunięto atrybut `required` z właściwości `pageSize` w żądaniu GET `/sessions` ("Pobranie listy sesji").
+  - Zaktualizowano przykłady (example) w definicjach endpointów.
+
+### Wersja 2.0.0 RC5.2
+- **Uprawnienia** 
+  - "Nadanie uprawnień administratora podmiotu podrzędnego" (POST `/permissions/subunits/grants`)  
+  Dodano właściwość `subunitName` ("Nazwa jednostki podrzędnej") w żądaniu. Pole jest wymagane, gdy jednostka podrzędna identyfikowana jest identyfikatorem wewnętrznym.
+  - "Pobranie listy uprawnień administratorów jednostek i podmiotów podrzędnych" (POST `/permissions/query/subunits/grants`)  
+  Dodano w odpowiedzi właściwość `subunitName` ("Nazwa jednostki podrzędnej").
+  - "Pobranie listy uprawnień do pracy w KSeF nadanych osobom fizycznym lub podmiotom" (POST `permissions/query/persons/grants`)  
+    Usunięto z wyników uprawnienie typu `Owner`. Uprawnienie `Owner` jest przypisywane systemowo do osoby fizycznej i nie podlega nadawaniu, więc nie powinno pojawiać się na liście nadanych uprawnień.
+  - "Pobranie listy własnych uprawnień" (POST `/permissions/query/personal/grants`)  
+    Rozszerzono enum filtra `PersonalPermissionType` o wartość `VatUeManage`.
+
+- **Limity**  
+  - Dodano endpointy do sprawdzania ustawionych limitów (kontekst, podmiot uwierzytelniony):
+    - GET `/limits/context`
+    - GET `/limits/subject`
+  - Dodano endpointy do zarządzania limitami (kontekst, podmiot uwierzytelniony) w środowisku testowym:
+    - POST/DELETE `/testdata/limits/context/session`
+    - POST/DELETE `/testdata/limits/subject/certificate`
+  - Zaktualizowano [Limity](limity/limity.md).
+
+- **Status faktury**  
+  Dodano właściwość `invoicingMode` w modelu odpowiedzi. Zaktualizowano dokumentację: [Automatyczne określanie trybu wysyłki offline](offline/automatyczne-okreslanie-trybu-offline.md).
+
+- **OpenAPI**
+  - Doprecyzowano ograniczenia dla właściwości typu integer w requests poprzez dodanie atrybutów `minimum` / `exclusiveMinimum`, `maximum` / `exclusiveMaximum` oraz wartości domyślnych `default`.
+  - Zaktualizowano przykłady (example) w definicjach endpointów.
+  - Doprecyzowano opisy endpointów.
+  - Dodano atrybut `required` dla wymaganych właściwości w żądaniach i odpowiedziach.
+
+### Wersja 2.0.0 RC5.1
+
+- **Pobranie listy metadanych certyfikatów (POST /certificates/query)**  
+  Zmieniono reprezentację identyfikatora podmiotu z pary właściwości `subjectIdentifier` + `subjectIdentifierType` na obiekt złożony `subjectIdentifier` { `type`, `value` }.
+
+- **Pobranie listy metadanych faktur (POST /invoices/query/metadata)**
+  - Zmieniono reprezentację wybranych identyfikatorów z par właściwości typ + value na obiekty złożone { type, value }: 
+    - `invoiceMetadataBuyer.identifier` + `invoiceMetadataBuyer.identifierType` na obiekt złożony `invoiceMetadataBuyerIdentifier` { `type`, `value` },
+    - `invoiceMetadataThirdSubject.identifier` + `invoiceMetadataThirdSubject.identifierType` na obiekt złożony `InvoiceMetadataThirdSubjectIdentifier` { `type`, `value` }.
+  - Usunięto `obsoleted` właściwości `Identitifer` z obiektów  `InvoiceMetadataSeller` oraz `InvoiceMetadataAuthorizedSubject`.
+  - Zmieniono właściwość `invoiceQuerySeller` na `sellerNip` w filtrze żądania.
+  - Zmieniono właściwość `invoiceQueryBuyer` na `invoiceQueryBuyerIdentifier` z właściwościami { `type`, `value` } w filtrze żądania.
+
+- **Uprawnienia**  
+  Zmieniono reprezentację wybranych identyfikatorów z par właściwości typ + value na obiekty złożone { type, value }: 
+    - "Pobranie listy własnych uprawnień" (POST `/permissions/query/personal/grants`):  
+      - `contextIdentifier` + `contextIdentifierType` -> `contextIdentifier` { `type`, `value` },
+      - `authorizedIdentifier` + `authorizedIdentifierType` -> `authorizedIdentifier` { `type`, `value` },
+      - `targetIdentifier` + `targetIdentifierType` -> `targetIdentifier` { type, value }.  
+    - "Pobranie listy uprawnień do pracy w KSeF nadanych osobom fizycznym lub podmiotom" (POST `/permissions/query/persons/grants`),
+      - `contextIdentifier` + `contextIdentifierType` -> `contextIdentifier` { `type`, `value` },
+      - `authorizedIdentifier` + `authorizedIdentifierType` -> `authorizedIdentifier` { `type`, `value` },
+      - `targetIdentifier` + `targetIdentifierType` -> `targetIdentifier` { `type`, `value` },
+      - `authorIdentifier` + `authorIdentifierType` -> `authorIdentifier` { `type`, `value` }.    
+    - "Pobranie listy uprawnień administratorów jednostek i podmiotów podrzędnych" (POST `/permissions/query/subunits/grants`):
+      - `authorizedIdentifier` + `authorizedIdentifierType` -> `authorizedIdentifier` { `type`, `value` },
+      - `subunitIdentifier` + `subunitIdentifierType` -> `subunitIdentifier` { `type`, `value` },
+      - `authorIdentifier` + `authorIdentifierType` -> `authorIdentifier` { `type`, `value` }.
+    - "Pobranie listy ról podmiotu" (POST `/permissions/query/entities/roles`):
+      - `parentEntityIdentifier` + `parentEntityIdentifierType` -> `parentEntityIdentifier` { `type`, `value` }.
+    - "Pobranie listy podmiotów podrzędnych" (POST `/permissions/query/subordinate-entities/roles`):
+      - `subordinateEntityIdentifier` + `subordinateEntityIdentifierType` -> `subordinateEntityIdentifier` { `type`, `value` }.
+    - "Pobranie listy uprawnień podmiotowych do obsługi faktur" (POST `/permissions/query/authorizations/grants`):
+      - `authorizedEntityIdentifier` + `authorizedEntityIdentifierType` -> `authorizedEntityIdentifier` { `type`, `value` },
+      - `authorizingEntityIdentifier` + `authorizingEntityIdentifierType` -> `authorizingEntityIdentifier` { `type`, `value` },
+      - `authorIdentifier` + `authorIdentifierType` -> `authorIdentifier` { `type`, `value` }
+    - "Pobranie listy uprawnień administratorów lub reprezentantów podmiotów unijnych uprawnionych do samofakturowania" (POST `/permissions/query/eu-entities/grants`):
+      - `authorIdentifier` + `authorIdentifierType` -> `authorIdentifier` { `type`, `value` }        
+
+- **Nadanie uprawnień administratora podmiotu unijnego (POST permissions/eu-entities/administration/grants)**  
+  Zmieniono nazwę właściwości w żądaniu z `subjectName` na `euEntityName`.
+
+- **Uwierzytelnienie z wykorzystaniem tokena KSeF**  
+  Usunięto nadmiarowe wartości enum `None`, `AllPartners` we właściwości `contextIdentifier.type` żądania POST `/auth/ksef-token`.
+
+- **Tokeny KSeF**  
+  - Ujednoznaczniono model odpowiedzi GET `/tokens`: właściwości `authorIdentifier.type`, `authorIdentifier.value`, `contextIdentifier.type`, `contextIdentifier.value` są zawsze zwracane (required, non-nullable),
+  - Usunięto nadmiarowe wartości enum `None`, `AllPartners` we właściwościach `authorIdentifier.type` oraz `contextIdentifier.type` w modelu odpowiedzi GET `/tokens` ("Pobranie listy wygenerowanych tokenów").
+
+- **Sesja wsadowa**  
+  Usunięto nadmiarowy kod błędu `21401`	- "Dokument nie jest zgodny ze schemą (json)".
+
+- **Pobranie statusu sesji (GET /sessions/{referenceNumber})**  
+  - Dodano kod błędu `420` - "Przekroczony limit faktur w sesji".
+
+- **Pobieranie metadanych faktur (GET `/invoices/query/metadata`)**  
+  - Dodano w odpowiedzi (zawsze zwracaną) właściwość `isTruncated` (boolean) – "Określa, czy wynik został obcięty z powodu przekroczenia limitu liczby faktur (10 000)",
+  - Oznaczono właściwość `amount.type` w filtrze żądania jako wymaganą.
+
+- **Eksport paczki faktur: zlecenie (POST `/invoices/exports`)**
+  - Oznaczono właściwość `operationReferenceNumber` w modelu odpowiedzi jako zawsze zwracaną,
+  - Oznaczono właściwość `amount.type` w filtrze żądania jako wymaganą.
+
+- **Pobranie listy uprawnień do pracy w KSeF nadanych osobom fizycznym lub podmiotom (POST /permissions/query/persons/grants)**  
+  - Dodano `contextIdentifier` w filtrze żądania i w modelu odpowiedzi.
+
+- **OpenAPI**  
+  Usunięto nieużywany `operationId` ze specyfikacji. Zmiana porządkująca.
+
+### Wersja 2.0.0 RC5
+
+- **Obsługa faktur PEF i dostawców usług Peppol**
+  - Dodano obsługę faktur `PEF` wysyłanych przez dostawcę usług Peppol. Nowe możliwości nie zmieniają dotychczasowych zachowań KSeF dla innych formatów, są rozszerzeniem API.
+  - Wprowadzono nowy typ kontekstu uwierzytelniania: `PeppolId`, umożliwiający pracę w kontekście dostawcy usług Peppol.
+  - Automatyczna rejestracja dostawcy: przy pierwszym uwierzytelnieniu dostawcy usług Peppol (z użyciem dedykowanego certyfikatu) następuje jego automatyczna rejestracja w systemie.
+  - Dodano endpoint GET `/peppol/query` ("Lista dostawców usług Peppol") zwracający zarejestrowanych dostawców.
+  - Zaktualizowano reguły dostępu dla otwarcia i zamknięcia sesji, wysyłka faktur wymagaja uprawnienia `PefInvoiceWrite`.
+  - Dodano nowe schematy faktur: `FA_PEF (3)`, `FA_KOR_PEF (3)`,
+  - Rozszerzono `ContextIdentifier` o `PeppolId` w xsd `AuthTokenRequest`.
+
+- **UPO**
+  - Dodano element `Uwierzytelnienie`, który porządkuje dane z nagłówka UPO i rozszerza je o dodatkowe informacje; zastępuje dotychczasowe `IdentyfikatorPodatkowyPodmiotu` oraz `SkrotZlozonejStruktury`.
+  - `Uwierzytelnienie` zawiera:
+    - `IdKontekstu` – identyfikator kontekstu uwierzytelnienia,
+    - dowód uwierzytelnienia (w zależności od metody): 
+      - `NumerReferencyjnyTokenaKSeF` - identyfikator tokenu uwierzytelniającego w systemie KSeF,
+      - `SkrotDokumentuUwierzytelniajacego` - wartość funkcji skrótu dokumentu uwierzytelniającego w postaci otrzymanej przez system (łącznie z podpisem elektronicznym).
+  - W elemencie `Dokument` dodano:
+    - NipSprzedawcy,
+    - DataWystawieniaFaktury,
+    - DataNadaniaNumeruKSeF.
+  - Ujednolicono schemat UPO. UPO dla faktury i dla sesji korzystają ze wspólnej schemy upo-v4-2.xsd. Zastępuje dotychczasowe upo-faktura-v3-0.xsd i upo-sesja-v4-1.xsd.
+
+- **Limity żądań API**  
+  Dodano specyfikację [limitów żądań API](limity/limity-api.md).    
+
+- **Uwierzytelnianie**  
+  - Doprecyzowano kody statusów w GET `/auth/{referenceNumber}`, `/auth/sessions`: 
+    - `415` (brak uprawnień), 
+    - `425` (uwierzytelnienie unieważnione), 
+    - `450` (błędny token: nieprawidłowy token, nieprawidłowy czas, unieważniony, nieaktywny), 
+    - `460` (błąd certyfikatu: nieważny, błąd weryfikacji łańcucha, niezaufany łańcuch, odwołany, niepoprawny).  
+  - Aktualizacja opcjonalnej polityki IP w XSD `AuthTokenRequest`:
+    Zastąpiono `IpAddressPolicy` nową strukturą `AuthorizationPolicy`/`AllowedIps`. Zaktualizowano dokument [Uwierzytelnianie](uwierzytelnianie.md).
+
+- **Autoryzacja**
+  - Rozszerzono reguły dostępu o `VatUeManage`, `SubunitManage` dla DELETE `/permissions/common/grants/{permissionId}`: operację można wykonać, jeżeli podmiot posiada `CredentialsManage`, `VatUeManage` lub `SubunitManage`.
+  - Rozszerzono reguły dostępu o `Introspection` dla GET `/sessions/{referenceNumber}/...`: każdy z tych endpointów można teraz wywołać posiadając `InvoiceWrite` lub `Introspection`.
+  - Rozszerzono reguły dostępu o `InvoiceWrite` dla GET `/sessions` ("Pobranie listy sesji"): posiadając uprawnienie `InvoiceWrite`, można pobierać wyłącznie sesje utworzone przez podmiot uwierzytelniający; posiadając uprawnienie `Introspection`, można pobierać wszystkie sesje.
+  - Zmieniono reguły dostępu dla DELETE `/tokens/{referenceNumber}`: usunięto wymóg uprawnienia `CredentialsManage`.
+
+- **Pobranie danych do wniosku certyfikacyjnego (GET `certificates/enrollments/data`)**    
+  - Zmiana struktury odpowiedzi:
+    - Usunięto: givenNames (tablica string).
+    - Dodano: givenName (string).
+    - Charakter zmiany: breaking (zmiana nazwy i typu pola z tablicy na tekst).
+  - Dodano kod błędu `25011` — „Nieprawidłowy algorytm podpisu CSR”.
+  - Uściślono wymagania dotyczące klucza prywatnego używanego do podpisu CSR w [Certyfikaty KSeF](certyfikaty-KSeF.md).
+
+- **Tokeny KSeF**  
+  - Dodano kod błędu dla odpowiedzi POST `/tokens` ("Wygenerowanie nowego tokena"): `26002` - "Nie można wygenerować tokena dla obecnego typu kontekstu". Token może być generowany wyłącznie w kontekście `Nip` lub `InternalId`.
+  - Rozszerzono katalog uprawnień możliwych do przypisania tokenowi: dodano `SubunitManage` oraz `EnforcementOperations`.
+  - Dodano parametry zapytania do filtrowania wyników dla GET `/tokens`:
+    - `description` - wyszukiwanie w opisie tokena (bez rozróżniania wielkości liter), min. 3 znaki,
+    - `authorIdentifier` - wyszukiwanie po identyfikatorze twórcy (bez rozróżniania wielkości liter), min. 3 znaki,
+    - `authorIdentifierType` - typ identyfikatora twórcy używany przy authorIdentifier (Nip, Pesel, Fingerprint).
+  - Dodano właściwość 
+    - `lastUseDate` - "Data ostatniego użycia tokena",
+    - `statusDetails` - "Dodatkowe informacje na temat statusu, zwracane w przypadku błędów"  
+    w odpowiedziach dla:
+    - GET `/tokens` ("lista tokenów"),
+    - GET `/tokens/{referenceNumber}` ("status tokena").
+
+- **Pobieranie metadanych faktur (GET `/invoices/query/metadata`)**  
+  - Filtry:
+    - stronicowanie: zwiększono maksymalny rozmiar strony do 250 rekordów,
+    - usunięto właściwość `schemaType` (z wartościami `FA1`, `FA2`, `FA3`), wcześniej oznaczoną jako deprecated,
+    - dodano `seller.nip`; `seller.identifier` oznaczono jako deprecated (zostanie usunięte w następnym wydaniu),
+    - dodano `authorizedSubject.nip`; `authorizedSubject.identifier` oznaczono jako deprecated (zostanie usunięte w następnym wydaniu),
+    - doprecyzowano opis: brak wartości w `dateRange.to` oznacza użycie bieżącej daty i czasu (UTC),
+    - doprecyzowano maksymalny dozwolony zakres `DateRange` na 2 lata.
+  - Sortowanie:
+    - wyniki są sortowane rosnąco według typu daty wskazanej w `DateRange`; do pobierania przyrostowego zalecany typ `PermanentStorage`,
+  - Model odpowiedzi:
+    - usunięto właściwość `totalCount`,
+    - zmieniono nazwę `fileHash` na `invoiceHash`,
+    - dodano `seller.nip`; `seller.identifier` oznaczono jako deprecated (zostanie usunięte w następnym wydaniu),
+    - dodano `authorizedSubject.nip`; `authorizedSubject.identifier` oznaczono jako deprecated (zostanie usunięte w następnym wydaniu),
+    - oznaczono `invoiceHash` jako zawsze zwracane,
+    - oznaczono `invoicingMode` jako zawsze zwracane,
+    - oznaczono `authorizedSubject.role` ("Podmiot upoważniony") jako zawsze zwracane,
+    - oznaczono `invoiceMetadataAuthorizedSubject.role` ("Nip podmiotu upoważnionego") jako zawsze zwracane,
+    - oznaczono `invoiceMetadataThirdSubject.role` ("Lista podmiotów trzecich") jako zawsze zwracane.
+  - Usunięto oznaczenia [Mock] z opisów właściwości.
+
+- **Eksport paczki faktur: zlecenie (POST `/invoices/exports`)**
+  - Filtry:
+    - dodano `seller.nip`; `seller.identifier` oznaczono jako deprecated (zostanie usunięte w następnym wydaniu),
+  - Usunięto oznaczenia [Mock].
+  - Zmieniono kod błędu: z `21180` na `21181` ("Nieprawidłowe żądanie eksportu faktur").
+  - Doprecyzowano zasady sortowania. Faktury w paczce są sortowane rosnąco według typu daty wskazanego w `DateRange` podczas inicjalizacji eksportu.
+
+  - **Eksport paczki faktur: status (GET `/invoices/exports/{operationReferenceNumber}`)**
+    - Opisy statusów: uzupełniono dokumentację statusu eksportu:
+      - `100` - "Eksport faktur w toku" 
+      - `200` - "Eksport faktur zakończony sukcesem" 
+      - `415` - "Błąd odszyfrowania dostarczonego klucza"  
+      - `500` - "Nieznany błąd ({statusCode})"
+    - Model odpowiedzi `package`:
+      - dodano:
+        - `invoiceCount` - "Łączna liczba faktur w paczce. Maksymalna liczba faktur w paczce to 10 000",
+        - `size` - "Rozmiar paczki w bajtach. Maksymalny rozmiar paczki to 1 GiB (1 073 741 824 bajtów)",
+        - `isTruncated` - "Określa, czy wynik eksportu został ucięty z powodu przekroczenia limitu liczby faktur lub wielkości paczki",
+        - `lastIssueDate` - "Data wystawienia ostatniej faktury ujętej w paczce.\nPole występuje wyłącznie wtedy, gdy paczka została ucięta i eksport był filtrowany po typie daty `Issue`",
+        - `lastInvoicingDate` - "Data przyjęcia ostatniej faktury ujętej w paczce.\nPole występuje wyłącznie wtedy, gdy paczka została ucięta i eksport był filtrowany po typie daty `Invoicing`",
+        - `lastPermanentStorageDate` - "Data trwałego zapisu ostatniej faktury ujętej w paczce.\nPole występuje wyłącznie wtedy, gdy paczka została ucięta i eksport był filtrowany po typie daty `PermanentStorage`".
+    - Model odpowiedzi `package.parts`
+      - usunięto `fileName`, `headers`,
+      - dodano:
+        - `partName` - "Nazwa pliku części paczki",
+        - `partSize` - "Rozmiar części paczki w bajtach. Maksymalny rozmiar części to 50MiB (52 428 800 bajtów)",
+        - `partHash` - "Skrót SHA256 pliku części paczki, zakodowany w formacie Base64",
+        - `encryptedPartSize` - "Rozmiar zaszyfrowanej części paczki w bajtach",
+        - `encryptedPartHash` - "Skrót SHA256 zaszyfrowanej części paczki, zakodowany w formacie Base64",
+        - `expirationDate` - "Moment wygaśnięcia linku do pobrania części",
+      - oznaczono wszystkich właściwości w `package` jako zawsze zwracane,
+    - Usunięto oznaczenia [Mock].
+
+- **Uprawnienia**
+  - Rozszerzono żądanie POST `/permissions/eu-entities/administration/grants` ("Nadanie uprawnień administratora podmiotu unijnego") o "Nazwę podmiotu" `subjectName`.
+  - Rozszerzono żądanie POST `/permissions/query/persons/grants` o nową wartość `System` dla filtru identyfikatora podmiotu nadającego uprawnienia `authorIdentifier` i usunięcie wymagalność z pola `authorIdentifier.value`.
+  - Rozszerzono żądanie POST `/permissions/query/persons/grants` o nową wartość `AllPartners` dla filtru identyfikator podmiotu docelowego `targetIdentifier` i usunięcie wymagalność z pola `targetIdentifier.value`.
+  - Dodano żądanie POST `/permissions/query/personal/grants` do pobrania listy własnych uprawnień.
+  - Dodano do żądania POST `/permissions/indirect/grants` ("Nadanie uprawnień w sposób pośredni") nową wartość `AllPartners` dla "identyfikatora podmiotu docelowego", oznaczającą uprawnienia generalne
+
+- **Pobranie faktury (GET `/invoices/ksef/{ksefNumber}`)**  
+   Dodano kod błędu dla odpowiedzi 400: `21165` - "Faktura o podanym numerze KSeF nie jest jeszcze dostępna".
+
+- **Załączniki do faktur**  
+  Dodano endpoint GET `/permissions/attachments/status` do sprawdzania statusu zgody na wystawianie faktur z załącznikiem.
+
+- **Pobranie listy sesji**  
+  Rozszerzono uprawnienia dla GET `/sessions`: dodano `InvoiceWrite`. Posiadając uprawnienie `InvoiceWrite`, można pobierać wyłącznie sesje utworzone przez podmiot uwierzytelniający; posiadając uprawnienie `Introspection`, można pobierać wszystkie sesje.
+
+- **Sesja interaktywnej**  
+  - Zaktualizowano kody błędów dla POST `/sessions/online/{referenceNumber}/invoices` ("Wysłanie faktury"):
+    - usunięto `21154` - "Sesja interaktywna zakończona", 
+    - dodano `21180` - "Status sesji nie pozwala na wykonanie operacji".
+  - Dodano błąd `21180` - "Status sesji nie pozwala na wykonanie operacji" dla POST `/sessions/online/{referenceNumber}/close` ("Zamknięcie sesji interaktywnej").
+
+- **Sesja wsadowa**  
+  - Dodano błąd `21180` - "Status sesji nie pozwala na wykonanie operacji" dla POST `/sessions/batch/{referenceNumber}/close` ("Zamknięcie sesji wsadowej").
+
+- **Status faktury w sesji**  
+  Rozszerzono odpowiedź dla GET `/sessions/{referenceNumber}/invoices` ("Pobranie faktur sesji") oraz GET `/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}` ("Pobranie statusu faktury z sesji") o właściwości:
+  - `permanentStorageDate` – data trwałego zapisu faktury w repozytorium KSeF (od tego momentu faktura jest dostępna do pobrania),
+  - `upoDownloadUrl` – adres do pobrania UPO.
+
+- **OpenAPI**
+  - Dodano uniwersalny kod błędu walidacji danych wejściowych `21405` do wszystkich endpointów. Treść błędu z walidatora zwracana w odpowiedzi.
+  - Dodano odpowiedź 400 z walidacją zwracającą kod błędu `30001` („Podmiot lub uprawnienie już istnieje.”) dla POST `/testdata/subject` oraz POST `/testdata/person`.
+  - Zaktualizowano przykłady (example) w definicjach endpointów.
+
+- **Dokumentacja**
+  - Doprecyzowano algorytmy podpisu i przykłady w [Kody QR](kody-qr.md).
+  - Zaktualizowano przykłady kodu w C# i Javie.
+
+### Wersja 2.0.0 RC4
+
+- **Certyfikaty KSeF**
+  - Dodano nową właściwość `type` w certyfikatach KSeF.
+  - Dostępne typy certyfikatów:
+    - `Authentication` – certyfikat do uwierzytelnienia w systemie KSeF,
+    - `Offline` – certyfikat ograniczony wyłącznie do potwierdzania autentyczności wystawcy i integralności faktury w trybie offline (KOD II).
+  - Zaktualizowano dokumentację procesów `/certificates/enrollments`, `/certificates/query`, `/certificates/retrieve`.
+
+- **Kody QR**
+  - Doprecyzowano, że KOD II może być generowany wyłącznie w oparciu o certyfikat typu `Offline`.
+  - Dodano ostrzeżenie bezpieczeństwa, że certyfikaty `Authentication` nie mogą być używane do wystawiania faktur offline.
+
+- **Status sesji**
+  - Aktualizacja autoryzacji - pobieranie informacji o sesji, fakturach i UPO wymaga uprawnienia: ```InvoiceWrite```.
+  - Zmieniono kod statusu *trwa przetwarzanie*: z `300` na `150` dla sesji wsadowej.
+
+- **Pobieranie metadanych faktur (`/invoices/query/metadata`)**  
+Rozszerzono model odpowiedzi o pola:
+  - `fileHash` – skrót SHA256 faktury,
+  - `hashOfCorrectedInvoice` – skrót SHA256 korygowanej faktury offline,
+  - `thirdSubjects` – lista trzecich podmiotów,
+  - `authorizedSubject` – podmiot upoważniony (nowy obiekt `InvoiceMetadataAuthorizedSubject` zawierający `identifier`, `name`, `role`),
+ - Dodano możliwość filtrowania po typie dokumentu (`InvoiceQueryFormType`), dostępne wartości: `FA`, `PEF`, `RR`. 
+ - Pole `schemaType` oznaczone jako deprecated – planowane do usunięcia w przyszłych wersjach API.
+
+
+- **Dokumentacja**
+  - Dodano dokument opisujący [numer KSeF](faktury/numer-ksef.md).
+  - Dodano dokument opisujący [korektę techniczną](offline/korekta-techniczna.md) dla faktur wystawionych w trybie offline.
+  - Doprecyzowano sposób [wykrywania duplikatów](faktury/weryfikacja-faktury.md)
+
+- **OpenAPI**
+  - Pobranie listy metadanych faktur 
+    - Dodano właściwość: `hasMore` (boolean) – informuje o dostępności kolejnej strony wyników. Właściwość `totalCount` została oznaczona jako deprecated (pozostaje chwilowo w odpowiedzi dla zgodności wstecznej).
+    - W filtrowaniu po zakresie `dateRange` właściwość `to` (data końcowa zakresu) nie jest już obowiązkowa.
+  - Wyszukiwanie nadanych uprawnień - w odpowiedzi dodano właściwość `hasMore`, usunięto `pageSize`, `pageOffset`.
+  - Pobranie statusu uwierzytelniania - usunięto z odpowiedzi redundantne `referenceNumber`, `isCurrent`.
+  - Ujednolicenie stronicowania - endpoint `/sessions/{referenceNumber}/invoices` (pobranie faktur sesji) przechodzi na paginację opartą o nagłówek żądania `x-continuation-token`; usunięto parametr `pageOffset`, `pageSize` pozostaje bez zmian. Pierwsza strona bez nagłówka; kolejne strony pobiera się przez przekazanie wartości tokenu zwróconej przez API. Zmiana spójna z innymi zasobami korzystającymi z `x-continuation-token` (np. `/auth/sessions`, `/sessions/{referenceNumber}/invoices/failed`).
+  - Usunięto obsługę identyfikatora `InternalId` w polu `targetIdentifier` podczas nadawania uprawnień pośrednich (`/permissions/indirect/grants`). Od teraz dopuszczalny jest wyłącznie identyfikator `Nip`.
+  - Status operacji nadawania uprawnień – rozszerzono listę możliwych kodów statusu w odpowiedzi:
+    - 410 – Podane identyfikatory są niezgodne lub pozostają w niewłaściwej relacji.
+    - 420 – Użyte poświadczenia nie mają uprawnień do wykonania tej operacji.
+    - 430 – Kontekst identyfikatora nie odpowiada wymaganej roli lub uprawnieniom.
+    - 440 – Operacja niedozwolona dla wskazanych powiązań identyfikatorów.
+    - 450 – Operacja niedozwolona dla wskazanego identyfikatora lub jego typu.
+  - Dodano obsługę błędu **21418** – „Przekazany token kontynuacji ma nieprawidłowy format” we wszystkich endpointach wykorzystujących mechanizm paginacji z użyciem `continuationToken` (`/auth/sessions`, `/sessions`, `/sessions/{referenceNumber}/invoices`, `/sessions/{referenceNumber}/invoices/failed`, `/tokens`).
+  - Doprecyzowano proces pobierania paczki faktur:
+    - `/invoices/exports` – rozpoczęcie procesu tworzenia paczki faktur,
+    - `/invoices/async-query/{operationReferenceNumber}` – sprawdzenie statusu i odbiór gotowej paczki.
+  - Zmieniono nazwę modelu `InvoiceMetadataQueryRequest` na `QueryInvoicesMetadataResponse`.
+  - Rozszerzono typ `PersonPermissionsAuthorIdentifier` o nową wartość `System` (Identyfikator systemowy). Wartość ta wykorzystywana jest do oznaczania uprawnień nadawanych przez KSeF na podstawie złożonego wniosku ZAW-FA. Zmiana dotyczy endpointu: `/permissions/query/persons/grants`.
+
+### Wersja 2.0.0 RC3
+
+- **Dodanie endpointu do pobierania listy metadanych faktur**  
+  - `/invoices/query` (mock) zastąpiony przez `/invoices/query/metadata` – produkcyjny endpoint do pobierania metadanych faktur
+  - Aktualizacja powiązanych modeli danych.
+
+- **Aktualizacja mockowego endpointu `invoices/async-query` do inicjalizacji zapytania o pobranie faktur**  
+  Zaktualizowano powiązane modele danych.
+
+- **OpenAPI**
+  - Uzupełniono specyfikację endpointów o wymagane uprawnienia (`x-required-permissions`).
+  - Dodano odpowiedzi `403 Forbidden` i `401 Unauthorized` w specyfikacji endpointów.
+  - Dodano atrybut ```required``` w odpowiedziach zapytań o uprawnienia.
+  - Zaktualizowano opis endpointu  ```/tokens```
+  - Usunięto zduplikowane definicje ```enum```
+  - Ujednolicono model odpowiedzi SessionInvoiceStatusResponse w ```/sessions/{referenceNumber}/invoices``` oraz ```/sessions/{referenceNumber}/invoices/{invoiceReferenceNumber}```.
+  - Dodano status walidacji 400: „Uwierzytelnianie zakończone niepowodzeniem | Brak przypisanych uprawnień”.
+
+- **Status sesji**
+  - Dodano status ```Cancelled``` - "Sesja anulowania. Został przekroczony czas na wysyłkę w sesji wsadowej, lub nie przesłano żadnych faktur w sesji interaktywnej."
+  - Dodano nowe kody błędów:
+    - 415 - "Brak możliwości wysyłania faktury z załącznikiem"
+    - 440 - "Sesja anulowana, przekroczono czas wysyłki"
+    - 445 - "Błąd weryfikacji, brak poprawnych faktur"
+
+- **Status wysyłki faktur**
+  - Dodano datę ```AcquisitionDate``` - data nadania numeru KSeF.
+  - Pole ```ReceiveDate``` zastąpiono ```InvoicingDate``` – data przyjęcia faktury do systemu KSeF.  
+
+- **Wysyłka faktur w sesji**
+  - Dodano [walidację](faktury/weryfikacja-faktury.md#ograniczenia-ilo%C5%9Bciowe) rozmiaru paczki zip (100 MB) i liczby paczek (50) w sesji wsadowej
+  - Dodano [walidację](faktury/weryfikacja-faktury.md#ograniczenia-ilo%C5%9Bciowe) liczby faktur w sesji interaktywnej i wsadowej.
+  - Zmieniono kod statusu „Trwa przetwarzanie” z 300 na 150.
+
+- **Uwierzytelnienie z wykorzystaniem podpisu XAdES**  
+  - Poprawka ContextIdentifier w xsd AuthTokenRequest. Należy użyć poprawionej wersji [schematu XSD](https://api-test.ksef.mf.gov.pl/docs/v2/schemas/authv2.xsd). [Przygotowanie dokumentu XML](uwierzytelnianie.md#1-przygotowanie-dokumentu-xml-authtokenrequest)
+  - Dodano kod błędu`21117` - „Nieprawidłowy identyfikator podmiotu dla wskazanego typu kontekstu”.
+
+- **Usunięcie endpointu do anonimowego pobierania faktury ```invoices/download```**  
+  Funkcjonalność pobierania faktur bez uwierzytelnienia została usunięta; dostępna wyłącznie w webowym narzędziu KSeF do weryfikacji i pobierania faktur.
+
+- **Dane testowe - obsługa faktur z załącznikami**  
+  Dodano nowe endpointy umożliwiające testowanie wysyłki faktur z załącznikami.
+
+- **Certyfikaty KSeF - Walidacja typu i długości klucza w CSR**  
+  - Uzupełniono opis endpointu POST ```/certificates/enrollments``` o wymagania dotyczące typów kluczy prywatnych w CSR (RSA, EC),
+  - Dodano nowy kod błędu 25010 w odpowiedzi 400: „Nieprawidłowy typ lub długość klucza.”
+
+- **Aktualizacja formatu certyfikatów publicznych**  
+  `/security/public-key-certificates` – zwraca certyfikaty w formacie DER zakodowane w Base64.
+
+
+### Wersja 2.0.0 RC2
+- **Nowe endpointy do zarządzania sesjami uwierzytelniania**  
+  Umożliwiają przeglądanie oraz unieważnianie aktywnych sesji uwierzytelniających.  
+  [Zarządzanie sesjami uwierzytelniania](auth/sesje.md)
+
+- **Nowy endpoint do pobierania listy sesji wysyłki faktur**\
+  `/sessions` – umożliwia pobranie metadanych dla sesji wysyłkowych (interaktywnych i wsadowych), z możliwością filtrowania m.in. po statusie, dacie zamknięcia i typie sesji.\
+  [Pobieranie listy sesji](faktury/sesje/sesja-sprawdzenie-stanu-i-pobranie-upo.md#1-pobranie-listy-sesji)
+  
+
+- **Zmiana w listowaniu uprawnień**  
+  `/permissions/query/authorizations/grants` – dodano typ zapytania (queryType) w filtrowaniu [uprawnień podmiotowych](uprawnienia.md#pobranie-listy-uprawnień-podmiotowych-do-obsługi-faktur).
+
+- **Obsługa nowej wersji schematu faktury FA(3)**  
+  W ramach otwierania sesji interaktywnej i wsadowej możliwy jest wybór schemy FA(3).
+
+- **Dodanie pola invoiceFileName w odpowiedzi dla sesji wsadowej**\
+  `/sessions/{referenceNumber}/invoices` – dodano pole invoiceFileName zawierające nazwę pliku faktury. Pole występuje tylko dla sesji wsadowych.
+   [Pobranie informacji na temat przesłanych faktur](faktury/sesje/sesja-sprawdzenie-stanu-i-pobranie-upo.md#3-pobranie-informacji-na-temat-przesłanych-faktur)

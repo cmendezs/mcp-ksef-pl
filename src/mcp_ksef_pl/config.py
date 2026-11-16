@@ -10,8 +10,8 @@ class KSeFEnvironment(StrEnum):
 
 
 # KSeF API v2 base URLs (api.ksef.mf.gov.pl/v2).
-# Reconciled against the CIRFMF api-changelog.md through v2.1.1 (2026-02-13);
-# the v2.0.1-2.1.1 delta is auth/permissions-only and does not affect these URLs.
+# Reconciled against the CIRFMF api-changelog.md through production v2.9.0 (2026-10-15);
+# no release in that range changed these base URLs.
 # The v1 domain (ksef.mf.gov.pl/api) and the demo environment are not part of v2.
 _BASE_URL_ENDPOINT = EndpointSet(
     production="https://api.ksef.mf.gov.pl/v2",
